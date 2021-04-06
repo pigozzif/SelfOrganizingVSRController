@@ -20,10 +20,10 @@ class Drawer(object):
         self.draw = ImageDraw.Draw(self.image)
 
     def plot_edges(self, edges, nodes_positions, nodes):
-        for u, v in edges:
+        for (u, v), w in edges.items():
             self.plot_arrow(nodes_positions[v], nodes_positions[u],
                             color="black" if nodes[u]["x"] == nodes[v]["x"]
-                                             and nodes[u]["y"] == nodes[v]["y"] else "red")
+                                             and nodes[u]["y"] == nodes[v]["y"] else "red", width=abs(w))
 
     def plot_rectangles(self):
         for x, voxel in enumerate(self.voxels):
@@ -34,8 +34,8 @@ class Drawer(object):
                                   self.pad + self.voxel_size * (y + 1) + self.blank_size * y)],
                                 outline="blue", width=10, fill="white")
 
-    def plot_arrow(self, pt_a, pt_b, width=1, color="black"):
-        self.draw.line((pt_a, pt_b), width=width, fill=color)
+    def plot_arrow(self, pt_a, pt_b, width, color="black"):
+        self.draw.line((pt_a, pt_b), width=int(width * 5), fill=color)
         x0, y0 = pt_a
         x1, y1 = pt_b
         xb = 0.95 * (x1 - x0) + x0
@@ -101,7 +101,7 @@ class Drawer(object):
 def read_file(file_name):
     Row = namedtuple("row", ["index", "x", "y", "function", "edges", "type"])
     nodes = {}
-    edges = []
+    edges = {}
     voxel_to_num_sensors = {}
     with open(file_name, "r") as file:
         for line in file:
@@ -110,7 +110,9 @@ def read_file(file_name):
             line = line.split(",")
             row = Row(int(line[0]), int(line[1]), int(line[2]), line[3], line[4], line[5].strip("\n"))
             if row.edges:
-                edges.extend([(row.index, int(e)) for e in row.edges.split("-")])
+                # BE CAREFUL WITH OLD BRAINS
+                for e in row.edges.split("&"):
+                    edges[(row.index, int(e.split("/")[0]))] = float(e.split("/")[1])
             entry = {"x": row.x, "y": row.y, "function": row.function, "type": row.type}
             nodes[row.index] = entry
             if entry["type"].startswith("SENSING"):
@@ -129,7 +131,7 @@ def main(input_file, output_file):
     voxel_size = 400
     node_size = 20
     blank_size = node_size * 2
-    func_to_color = {"SIGMOID": "yellow", "RELU": "cyan", "TANH": "green", "SIN": "red"}
+    func_to_color = {"SIGMOID": "yellow", "RELU": "cyan", "TANH": "green", "SIN": "orange"}
     font = ImageFont.truetype("/Library/Fonts/times_new_roman.ttf", 15)
     drawer = Drawer(voxels, voxel_size, node_size, pad, blank_size)
     drawer.plot_rectangles()

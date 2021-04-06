@@ -144,7 +144,8 @@ public class MyController implements Controller<SensingVoxel> {
         public String toString() {
            return String.join(",", String.valueOf(index),
                     String.valueOf(x),  String.valueOf(y), String.valueOf(function),
-                    String.join("-", ingoingEdges.stream().map(e -> String.valueOf(e.getSource())).toArray(String[]::new)));
+                    String.join("&", ingoingEdges.stream().map(e -> String.join("/",
+                            String.valueOf(e.getSource()), String.valueOf(e.getParams()[0]))).toArray(String[]::new)));
         }
 
     }
