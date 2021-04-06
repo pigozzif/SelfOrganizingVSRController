@@ -37,7 +37,6 @@ public class MyController implements Controller<SensingVoxel> {
             source = other.source;
         }
         // TODO: decide whether to keep list alltogether
-        // TODO: double[]?
         public double[] getParams() { return new double[] { weight, bias }; }
 
         public void perturb(List<Double> params) {

@@ -70,7 +70,7 @@ public class VideoMaker {
         Reader reader = null;
         List<CSVRecord> records = null;
         List<String> headers = null;
-        Process process = Runtime.getRuntime().exec("python parse_best_file.py " + inputFileName + " " + intermediateFileName);
+        Process process = Runtime.getRuntime().exec("python python/parse_best_file.py " + inputFileName + " " + intermediateFileName);
         process.waitFor();
         inputFileName = intermediateFileName;
         try {
