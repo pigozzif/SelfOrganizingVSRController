@@ -48,12 +48,10 @@ public class testGeneticOperationsAndInit {
         assertEquals(26, nodes.size());
         MyController.Neuron[] candidates = nodes.stream().filter(MyController.Neuron::isHidden).toArray(MyController.Neuron[]::new);
         assertEquals(1, candidates.length);
-        //assertSame(MyController.NodeType.SENSING, nodes.get(candidates[0].getIngoingEdges().get(0).getSource()).getType());
         assertTrue(nodes.get(candidates[0].getIngoingEdges().get(0).getSource()).isSensing());
         candidates = nodes.stream().filter(n -> n.isActuator() & n.getIngoingEdges().size() == 5).toArray(MyController.Neuron[]::new);
         assertEquals(1, candidates.length);
         assertTrue(nodes.get(candidates[0].getIngoingEdges().get(4).getSource()).isHidden());
-        //assertSame(MyController.NodeType.HIDDEN, nodes.get(candidates[0].getIngoingEdges().get(4).getSource()).getType());
     }
 
     @Test
@@ -61,8 +59,8 @@ public class testGeneticOperationsAndInit {
         MyController controller = getDefaultController();
         MutateEdge mutation = new MutateEdge(0.1);
         MyController mutant = mutation.mutate(controller, random);
-        Map<MyController.Edge, double[]> edges = controller.getNodeSet().stream().flatMap(n -> n.getIngoingEdges().stream()).collect(Collectors.toMap(Function.identity(), e -> new double[] {e.getParams().get(0), e.getParams().get(1)}));
-        Map<MyController.Edge, double[]> newEdges = mutant.getNodeSet().stream().flatMap(n -> n.getIngoingEdges().stream()).collect(Collectors.toMap(Function.identity(), e -> new double[] {e.getParams().get(0), e.getParams().get(1)}));
+        Map<MyController.Edge, double[]> edges = controller.getNodeSet().stream().flatMap(n -> n.getIngoingEdges().stream()).collect(Collectors.toMap(Function.identity(), MyController.Edge::getParams));
+        Map<MyController.Edge, double[]> newEdges = mutant.getNodeSet().stream().flatMap(n -> n.getIngoingEdges().stream()).collect(Collectors.toMap(Function.identity(), MyController.Edge::getParams));
         for (Map.Entry<MyController.Edge, double[]> entry : edges.entrySet()) {
             assertFalse(Arrays.equals(entry.getValue(), newEdges.get(entry.getKey())));
         }
@@ -85,7 +83,6 @@ public class testGeneticOperationsAndInit {
         MyController mutant = mutation.mutate(controller, random);
         assertEquals(21, mutant.getNodeSet().stream().flatMap(n -> n.getIngoingEdges().stream()).toArray().length);
         for (MyController.Edge e: mutant.getNodeSet().stream().flatMap(n -> n.getIngoingEdges().stream()).toArray(MyController.Edge[]::new)) {
-            //assertSame(mutant.getNodeSet().get(e.getSource()).getType(), MyController.NodeType.SENSING);
             assertTrue(mutant.getNodeSet().get(e.getSource()).isSensing());
         }
     }

@@ -38,7 +38,7 @@ public class MyController implements Controller<SensingVoxel> {
         }
         // TODO: decide whether to keep list alltogether
         // TODO: double[]?
-        public List<Double> getParams() { return new ArrayList<>() {{ add(weight); add(bias); }}; }
+        public double[] getParams() { return new double[] { weight, bias }; }
 
         public void perturb(List<Double> params) {
             weight = params.get(0);
@@ -104,8 +104,8 @@ public class MyController implements Controller<SensingVoxel> {
         public boolean isHidden() { return !(this.isSensing() || this.isActuator());}
 
         protected double propagate(MyController.Edge e, MyController controller) {
-            List<Double> params = e.getParams();
-            return controller.getNodeSet().get(e.getSource()).send() * params.get(0) + params.get(1);
+            double[] params = e.getParams();
+            return controller.getNodeSet().get(e.getSource()).send() * params[0] + params[1];
         }
 
         public void advance() {

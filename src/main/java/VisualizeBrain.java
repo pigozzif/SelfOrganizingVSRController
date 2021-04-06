@@ -13,6 +13,7 @@ import java.util.logging.Logger;
 
 import static it.units.malelab.jgea.core.util.Args.a;
 
+
 public class VisualizeBrain {
 
     private static final Logger L = Logger.getLogger(VideoMaker.class.getName());
@@ -64,7 +65,7 @@ public class VisualizeBrain {
             ioException.printStackTrace();
         }
         System.out.println(intermediateFileName);
-        Process p = Runtime.getRuntime().exec("python visualize_brain.py " + intermediateFileName + " " + "test.png");
+        Process p = Runtime.getRuntime().exec("python visualize_brain.py " + intermediateFileName + " " + outputFileName);
         p.waitFor();
     }
 
