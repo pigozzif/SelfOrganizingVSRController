@@ -27,10 +27,10 @@ public class testGeneticOperationsAndInit {
         MyController controller = getDefaultController();
         List<MyController.Neuron> nodes = new ArrayList<>(controller.getNodeSet());
         assertEquals(25, nodes.size());
-        assertEquals(5, nodes.stream().filter(n -> n.getType() == MyController.NodeType.ACTUATOR).count());
-        assertEquals(20, nodes.stream().filter(n -> n.getType() == MyController.NodeType.SENSING).count());
+        assertEquals(5, nodes.stream().filter(MyController.Neuron::isActuator).count());
+        assertEquals(20, nodes.stream().filter(MyController.Neuron::isSensing).count());
         for (MyController.Neuron n : nodes) {
-            if (n.getType() == MyController.NodeType.ACTUATOR) {
+            if (n.isActuator()) {
                 assertEquals(4, n.getIngoingEdges().size());
             }
             else {
@@ -46,12 +46,14 @@ public class testGeneticOperationsAndInit {
         MyController mutant = mutation.mutate(controller, random);
         List<MyController.Neuron> nodes = new ArrayList<>(mutant.getNodeSet());
         assertEquals(26, nodes.size());
-        MyController.Neuron[] candidates = nodes.stream().filter(n -> n.getType() == MyController.NodeType.HIDDEN).toArray(MyController.Neuron[]::new);
+        MyController.Neuron[] candidates = nodes.stream().filter(MyController.Neuron::isHidden).toArray(MyController.Neuron[]::new);
         assertEquals(1, candidates.length);
-        assertSame(MyController.NodeType.SENSING, nodes.get(candidates[0].getIngoingEdges().get(0).getSource()).getType());
-        candidates = nodes.stream().filter(n -> n.getType() == MyController.NodeType.ACTUATOR & n.getIngoingEdges().size() == 5).toArray(MyController.Neuron[]::new);
+        //assertSame(MyController.NodeType.SENSING, nodes.get(candidates[0].getIngoingEdges().get(0).getSource()).getType());
+        assertTrue(nodes.get(candidates[0].getIngoingEdges().get(0).getSource()).isSensing());
+        candidates = nodes.stream().filter(n -> n.isActuator() & n.getIngoingEdges().size() == 5).toArray(MyController.Neuron[]::new);
         assertEquals(1, candidates.length);
-        assertSame(MyController.NodeType.HIDDEN, nodes.get(candidates[0].getIngoingEdges().get(4).getSource()).getType());
+        assertTrue(nodes.get(candidates[0].getIngoingEdges().get(4).getSource()).isHidden());
+        //assertSame(MyController.NodeType.HIDDEN, nodes.get(candidates[0].getIngoingEdges().get(4).getSource()).getType());
     }
 
     @Test
@@ -83,7 +85,8 @@ public class testGeneticOperationsAndInit {
         MyController mutant = mutation.mutate(controller, random);
         assertEquals(21, mutant.getNodeSet().stream().flatMap(n -> n.getIngoingEdges().stream()).toArray().length);
         for (MyController.Edge e: mutant.getNodeSet().stream().flatMap(n -> n.getIngoingEdges().stream()).toArray(MyController.Edge[]::new)) {
-            assertSame(mutant.getNodeSet().get(e.getSource()).getType(), MyController.NodeType.SENSING);
+            //assertSame(mutant.getNodeSet().get(e.getSource()).getType(), MyController.NodeType.SENSING);
+            assertTrue(mutant.getNodeSet().get(e.getSource()).isSensing());
         }
     }
 

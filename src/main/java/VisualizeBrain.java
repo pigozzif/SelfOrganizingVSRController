@@ -63,14 +63,15 @@ public class VisualizeBrain {
         } catch (IOException ioException) {
             ioException.printStackTrace();
         }
-        Process p = Runtime.getRuntime().exec("python visualize_brain.py " + intermediateFileName + " " + outputFileName);
+        System.out.println(intermediateFileName);
+        Process p = Runtime.getRuntime().exec("python visualize_brain.py " + intermediateFileName + " " + "test.png");
         p.waitFor();
     }
 
     private static void writeBrainToFile(Robot<?> robot, String outputName) throws IOException {
         BufferedWriter writer = new BufferedWriter(new FileWriter(outputName));
         MyController controller = (MyController) robot.getController();
-        writer.write("index,x,y,type,function,edges,sensor\n");
+        writer.write("index,x,y,function,edges,type\n");
         controller.getNodeSet().forEach(n -> {
             try {
                 writer.write(n.toString() + "\n");

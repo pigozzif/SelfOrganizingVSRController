@@ -32,13 +32,13 @@ public class ControllerFactory implements IndependentFactory<MyController> {
             int x = voxel.getX();
             int y = voxel.getY();
             for (int i = 0; i < this.morphology.getNumSensors()[MyController.flattenCoord(x, y, this.morphology.getBody().getW())]; ++i) {
-                controller.addNode(MultiLayerPerceptron.ActivationFunction.TANH, MyController.NodeType.SENSING, x, y, i);
+                controller.addSensingNode(x, y, i);
             }
-            controller.addNode(MultiLayerPerceptron.ActivationFunction.TANH, MyController.NodeType.ACTUATOR, x, y);
+            controller.addActuatorNode(x, y);
         }
         for (MyController.Neuron n1 : controller.getNodeSet()) {
             for (MyController.Neuron n2 : controller.getNodeSet()) {
-                if (n1.getType() == MyController.NodeType.SENSING && n2.getType() == MyController.NodeType.ACTUATOR &&
+                if (n1.isSensing() && n2.isActuator() &&
                                 n1.getX() == n2.getX() && n1.getY() == n2.getY() && random.nextDouble() < this.fillPerc) {
                     controller.addEdge(n1.getIndex(), n2.getIndex(), this.parameterSupplier.get(), this.parameterSupplier.get());
                 }

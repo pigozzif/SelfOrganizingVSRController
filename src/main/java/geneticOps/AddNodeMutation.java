@@ -30,13 +30,13 @@ public class AddNodeMutation implements Mutation<MyController> {
         Morphology.Pair sample = morphology.getAllowedMorph().get(random.nextInt(morphology.getAllowedMorph().size()));
         MultiLayerPerceptron.ActivationFunction a = functions[random.nextInt(functions.length)];
         MyController newBorn = new MyController(parent);
-        MyController.Neuron newNode = newBorn.addNode(a, MyController.NodeType.HIDDEN, sample.first, sample.second);
+        MyController.Neuron newNode = newBorn.addHiddenNode(a, sample.first, sample.second);
         List<MyController.Neuron> candidates = newBorn.getNodeSet().stream().filter(n -> newNode.getIndex() != n.getIndex() && MyController.euclideanDistance(newNode, n) <= 1.0)
                 .collect(Collectors.toList());
         List<Integer> indexes = IntStream.range(0, candidates.size()).boxed().collect(Collectors.toList());
         Collections.shuffle(indexes, random);
-        int source = candidates.get(indexes.stream().filter(i -> candidates.get(i).getType() != MyController.NodeType.ACTUATOR).findFirst().get()).getIndex();
-        int dest = candidates.get(indexes.stream().filter(i -> candidates.get(i).getType() != MyController.NodeType.SENSING).findFirst().get()).getIndex();
+        int source = candidates.get(indexes.stream().filter(i -> !candidates.get(i).isActuator()).findFirst().get()).getIndex();
+        int dest = candidates.get(indexes.stream().filter(i -> !candidates.get(i).isSensing()).findFirst().get()).getIndex();
         // TODO: is it really necessary to avoid actuators as sources and sensors as targets?
         newBorn.addEdge(source, newNode.getIndex(), parameterSupplier.get(), parameterSupplier.get());
         newBorn.addEdge(newNode.getIndex(), dest, parameterSupplier.get(), parameterSupplier.get());

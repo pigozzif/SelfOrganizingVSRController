@@ -96,7 +96,7 @@ public class Main extends Worker {
         //double videoEpisodeTime = d(a("videoEpisodeTime", "10"));
         //double videoEpisodeTransientTime = d(a("videoEpisodeTransientTime", "0"));
         int popSize = i(a("pop", "100"));
-        int births = i(a("births", "800"));
+        int births = i(a("births", "200"));
         int seed = Integer.parseInt(Args.a(args, "seed", null));
         //String experimentName = a("expName", "short");
         List<String> terrainNames = l(a("terrain", "hilly-1-10-rnd"));

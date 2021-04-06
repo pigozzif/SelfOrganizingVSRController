@@ -34,7 +34,7 @@ public class MutateNode implements Mutation<MyController> {
     }
 
     public MyController.Neuron pickNode(MyController controller, Random random) {
-        List<MyController.Neuron> candidates = controller.getNodeSet().stream().filter(n -> n.getType() == MyController.NodeType.HIDDEN)
+        List<MyController.Neuron> candidates = controller.getNodeSet().stream().filter(MyController.Neuron::isHidden)
                 .collect(Collectors.toList());
         if (candidates.isEmpty()) {
             return null;

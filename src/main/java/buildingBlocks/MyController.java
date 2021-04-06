@@ -1,7 +1,6 @@
 package buildingBlocks;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.*;
 import it.units.erallab.hmsrobots.core.controllers.Controller;
 import it.units.erallab.hmsrobots.core.controllers.MultiLayerPerceptron;
 import it.units.erallab.hmsrobots.core.objects.SensingVoxel;
@@ -14,13 +13,6 @@ import java.util.stream.Collectors;
 
 public class MyController implements Controller<SensingVoxel> {
     // TODO: implement toString()
-    public enum NodeType {
-
-        ACTUATOR,
-        SENSING,
-        HIDDEN
-
-    }
     // TODO: maybe better representation would be to also have a list of edges, and nodes have a list of edge indexes, but too much for the moment
     public static class Edge implements Serializable {
         @JsonProperty
@@ -56,71 +48,62 @@ public class MyController implements Controller<SensingVoxel> {
         public int getSource() { return source; }
         // TODO: equals() and hashCode() are not well-defined!
     }
-    // TODO: decide what to do with exiled Neuron class
-    public static class Neuron implements Serializable {
-        @JsonProperty
-        private final List<MyController.Edge> ingoingEdges;
-        @JsonProperty
-        private MultiLayerPerceptron.ActivationFunction function;
-        @JsonProperty
-        private final MyController.NodeType type;
-        @JsonProperty
-        private double message;
-        @JsonProperty
-        private double cache;
-        @JsonProperty
-        private final int x;
-        @JsonProperty
-        private final int y;
-        @JsonProperty
-        private final int index;
-        // TODO: very coarse, but few easy solutions (without specialization)
-        // TODO: char?
-        @JsonProperty
-        private final int numSensor;
 
-        @JsonCreator
+    @JsonIgnoreProperties(ignoreUnknown=true)
+    @JsonTypeInfo(
+            use = JsonTypeInfo.Id.NAME,
+            include = JsonTypeInfo.As.PROPERTY)
+    @JsonSubTypes({
+            @JsonSubTypes.Type(value=ActuatorNeuron.class, name="actuator"),
+            @JsonSubTypes.Type(value=SensingNeuron.class, name="sensing"),
+            @JsonSubTypes.Type(value=HiddenNeuron.class, name="hidden")
+    })
+    public abstract static class Neuron implements Serializable {
+        @JsonProperty
+        protected List<MyController.Edge> ingoingEdges;
+        @JsonProperty
+        protected MultiLayerPerceptron.ActivationFunction function;
+        @JsonProperty
+        protected double message;
+        @JsonProperty
+        protected double cache;
+        @JsonProperty
+        protected final int x;
+        @JsonProperty
+        protected final int y;
+        @JsonProperty
+        protected final int index;
+
+        //@JsonCreator
         public Neuron(@JsonProperty("index") int idx,
                       @JsonProperty("function") MultiLayerPerceptron.ActivationFunction a,
-                      @JsonProperty("type") MyController.NodeType t,
                       @JsonProperty("x") int coord1,
-                      @JsonProperty("y") int coord2,
-                      @JsonProperty("numSensor") int s) {
+                      @JsonProperty("y") int coord2) {
             index = idx;
             function = a;
-            type = t;
             x = coord1;
             y = coord2;
             ingoingEdges = new ArrayList<>();
             message = 0.0;
             cache = 0.0;
-            numSensor = s;
         }
 
         public Neuron(Neuron other) {
-            index = other.getIndex();
-            function = other.getActivation();
-            type = other.getType();
-            x = other.getX();
-            y = other.getY();
+            this(other.getIndex(), other.getActivation(), other.getX(), other.getY());
             ingoingEdges = other.getIngoingEdges().stream().map(MyController.Edge::new).collect(Collectors.toList());
-            message= 0.0;
+            message = 0.0;
             cache = 0.0;
-            numSensor = other.numSensor;
         }
         // TODO: call it forward?
-        public void compute(Grid<? extends SensingVoxel> voxels, MyController controller) {
-            SensingVoxel voxel = voxels.get(x, y);
-            switch (type) {
-                case SENSING -> message = function.apply(voxel.getLastReadings().stream().flatMapToDouble(x -> Arrays.stream(x.getValue()))
-                        .toArray()[numSensor]);
-                case ACTUATOR -> {message = function.apply(ingoingEdges.stream().mapToDouble(e -> this.propagate(e, controller)).sum());
-                    voxel.applyForce(message);}
-                default -> message = function.apply(ingoingEdges.stream().mapToDouble(e -> this.propagate(e, controller)).sum());
-            }
-        }
+        public abstract void compute(Grid<? extends SensingVoxel> voxels, MyController controller);
 
-        private double propagate(MyController.Edge e, MyController controller) {
+        public abstract boolean isActuator();
+
+        public abstract boolean isSensing();
+
+        public boolean isHidden() { return !(this.isSensing() || this.isActuator());}
+
+        protected double propagate(MyController.Edge e, MyController controller) {
             List<Double> params = e.getParams();
             return controller.getNodeSet().get(e.getSource()).send() * params.get(0) + params.get(1);
         }
@@ -140,10 +123,6 @@ public class MyController implements Controller<SensingVoxel> {
         }
 
         public int getIndex() { return index; }
-
-        public MyController.NodeType getType() {
-            return type;
-        }
 
         public List<MyController.Edge> getIngoingEdges() {
            return ingoingEdges;
@@ -165,9 +144,109 @@ public class MyController implements Controller<SensingVoxel> {
         @Override
         public String toString() {
            return String.join(",", String.valueOf(index),
-                    String.valueOf(x),  String.valueOf(y), String.valueOf(type), String.valueOf(function),
-                    String.join("-", ingoingEdges.stream().map(e -> String.valueOf(e.getSource())).toArray(String[]::new)),
-                    String.valueOf(numSensor));
+                    String.valueOf(x),  String.valueOf(y), String.valueOf(function),
+                    String.join("-", ingoingEdges.stream().map(e -> String.valueOf(e.getSource())).toArray(String[]::new)));
+        }
+
+    }
+
+    public static class ActuatorNeuron extends Neuron {
+        @JsonCreator
+        public ActuatorNeuron(@JsonProperty("index") int idx,
+                              @JsonProperty("x") int coord1,
+                              @JsonProperty("y") int coord2) {
+            super(idx, MultiLayerPerceptron.ActivationFunction.TANH, coord1, coord2);
+        }
+
+        public ActuatorNeuron(ActuatorNeuron entry) {
+            super(entry);
+        }
+
+        @Override
+        public void compute(Grid<? extends SensingVoxel> voxels, MyController controller) {
+            SensingVoxel voxel = voxels.get(x, y);
+            message = function.apply(ingoingEdges.stream().mapToDouble(e -> this.propagate(e, controller)).sum());
+            voxel.applyForce(message);
+        }
+
+        @Override
+        public boolean isActuator() { return true; }
+
+        @Override
+        public boolean isSensing() { return false; }
+
+        @Override
+        public String toString() {
+            return String.join(",", super.toString(), "ACTUATOR");
+        }
+
+    }
+
+    public static class SensingNeuron extends Neuron {
+        @JsonProperty
+        private final int numSensor;
+
+        @JsonCreator
+        public SensingNeuron(@JsonProperty("index") int idx,
+                             @JsonProperty("x") int coord1,
+                             @JsonProperty("y") int coord2,
+                             @JsonProperty("numSensor") int s) {
+            super(idx, MultiLayerPerceptron.ActivationFunction.TANH, coord1, coord2);
+            numSensor = s;
+        }
+
+        public SensingNeuron(SensingNeuron other) {
+            super(other);
+            numSensor = other.numSensor;
+        }
+
+        @Override
+        public void compute(Grid<? extends SensingVoxel> voxels, MyController controller) {
+            SensingVoxel voxel = voxels.get(x, y);
+            message = function.apply(voxel.getLastReadings().stream().flatMapToDouble(x -> Arrays.stream(x.getValue()))
+                    .toArray()[numSensor]);
+        }
+
+        @Override
+        public boolean isSensing() { return true; }
+
+        @Override
+        public boolean isActuator() { return false; }
+
+        @Override
+        public String toString() {
+            return String.join(",", super.toString(), "SENSING" + numSensor);
+        }
+
+    }
+
+    public static class HiddenNeuron extends Neuron {
+        @JsonCreator
+        public HiddenNeuron(@JsonProperty("index") int idx,
+                            @JsonProperty("function") MultiLayerPerceptron.ActivationFunction a,
+                            @JsonProperty("x") int coord1,
+                            @JsonProperty("y") int coord2) {
+            super(idx, a, coord1, coord2);
+        }
+
+        public HiddenNeuron(HiddenNeuron entry) {
+            super(entry);
+        }
+
+        @Override
+        public void compute(Grid<? extends SensingVoxel> voxels, MyController controller) {
+            message = function.apply(ingoingEdges.stream().mapToDouble(e -> this.propagate(e, controller)).sum());
+        }
+
+        @Override
+        public boolean isActuator() { return false; }
+
+        @Override
+        public boolean isSensing() { return false; }
+
+        @Override
+        public String toString() {
+            return String.join(",", super.toString(), "HIDDEN");
         }
 
     }
@@ -183,7 +262,18 @@ public class MyController implements Controller<SensingVoxel> {
     public MyController(@JsonProperty("nodes") List<Neuron> n) {
         nodes = new ArrayList<>();
         for (Neuron entry : n) {
-            nodes.add(new Neuron(entry));
+            if (entry instanceof SensingNeuron) {
+                nodes.add(new SensingNeuron((SensingNeuron) entry));
+            }
+            else if (entry instanceof ActuatorNeuron) {
+                nodes.add(new ActuatorNeuron((ActuatorNeuron) entry));
+            }
+            else if (entry instanceof HiddenNeuron)  {
+                nodes.add(new HiddenNeuron((HiddenNeuron) entry));
+            }
+            else {
+                throw new RuntimeException("Provided Neuron type not supported: " + n.getClass());
+            }
         }
     }
 
@@ -200,14 +290,22 @@ public class MyController implements Controller<SensingVoxel> {
         nodes.get(dest).addIngoingEdge(edge);
     }
 
-    public Neuron addNode(MultiLayerPerceptron.ActivationFunction a, NodeType t, int x, int y, int s) {
-        Neuron newNode = new Neuron(this.nodes.size(), a, t, x, y, s);
+    public Neuron addHiddenNode(MultiLayerPerceptron.ActivationFunction a, int x, int y) {
+        Neuron newNode = new HiddenNeuron(this.nodes.size(), a, x, y);
         nodes.add(newNode);
         return newNode;
     }
 
-    public Neuron addNode(MultiLayerPerceptron.ActivationFunction a, NodeType t, int x, int y) {
-        return this.addNode(a, t, x, y, -1);
+    public Neuron addActuatorNode(int x, int y) {
+        Neuron newNode = new ActuatorNeuron(this.nodes.size(), x, y);
+        nodes.add(newNode);
+        return newNode;
+    }
+
+    public Neuron addSensingNode(int x, int y, int s) {
+        Neuron newNode = new SensingNeuron(this.nodes.size(), x, y, s);
+        nodes.add(newNode);
+        return newNode;
     }
 
     public static double euclideanDistance(Neuron n1, Neuron n2) {
@@ -223,19 +321,6 @@ public class MyController implements Controller<SensingVoxel> {
     @Override
     public void reset() {
         this.getNodeSet().forEach(Neuron::reset);
-    }
-    // TODO: really need the two following?
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        MyController that = (MyController) o;
-        return nodes.equals(that.nodes);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(nodes);
     }
 
 }

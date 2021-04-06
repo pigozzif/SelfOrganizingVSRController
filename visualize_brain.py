@@ -4,10 +4,11 @@ import math
 from collections import namedtuple
 import sys
 import os
+import re
 
 
 def read_file(file_name):
-    Row = namedtuple("row", ["index", "x", "y", "type", "function", "edges", "sensor"])
+    Row = namedtuple("row", ["index", "x", "y", "function", "edges", "type"])
     nodes = {}
     edges = []
     voxel_to_num_sensors = {}
@@ -16,12 +17,12 @@ def read_file(file_name):
             if line.startswith("index"):
                 continue
             line = line.split(",")
-            row = Row(int(line[0]), int(line[1]), int(line[2]), line[3], line[4], line[5], int(line[6]))
+            row = Row(int(line[0]), int(line[1]), int(line[2]), line[3], line[4], line[5].strip("\n"))
             if row.edges:
                 edges.extend([(row.index, int(e)) for e in row.edges.split("-")])
-            entry = {"x": row.x, "y": row.y, "function": row.function, "type": row.type, "sensor": row.sensor}
+            entry = {"x": row.x, "y": row.y, "function": row.function, "type": row.type}
             nodes[row.index] = entry
-            if entry["type"] == "SENSING":
+            if entry["type"].startswith("SENSING"):
                 coord = entry["x"], entry["y"]
                 if coord not in voxel_to_num_sensors:
                     voxel_to_num_sensors[coord] = 1
@@ -62,8 +63,8 @@ def plot_arrow(draw, pt_a, pt_b, width=1, color="black"):
 def get_fixed_position(attr_dict, voxel_size, pad, blank_size, sensors):
     x, y = attr_dict["x"], attr_dict["y"]
     num_sensors = sensors[(x, y)]
-    if attr_dict["type"] == "SENSING":
-        return (pad + voxel_size * x + blank_size * x + ((attr_dict["sensor"] + 1) * (voxel_size / (num_sensors + 1))),
+    if attr_dict["type"].startswith("SENSING"):
+        return (pad + voxel_size * x + blank_size * x + ((int(re.findall(r'\d+', attr_dict["type"])[0]) + 1) * (voxel_size / (num_sensors + 1))),
                 pad + voxel_size * y + blank_size * y)
     return (pad + (voxel_size * x + (voxel_size / 2) + blank_size * x),
             voxel_size * y + voxel_size + pad + blank_size * y)
@@ -72,6 +73,7 @@ def get_fixed_position(attr_dict, voxel_size, pad, blank_size, sensors):
 def plot_nodes(nodes, draw, font, voxel_size, pad, node_size, blank_size, func_to_color, voxel_to_num_sensors):
     hidden_nodes = {}
     nodes_positions = {}
+    print(nodes)
     for idx, attrs in nodes.items():
         if attrs["type"] != "HIDDEN":
             x, y = get_fixed_position(attrs, voxel_size, pad, blank_size, voxel_to_num_sensors)
@@ -82,7 +84,7 @@ def plot_nodes(nodes, draw, font, voxel_size, pad, node_size, blank_size, func_t
             else:
                 hidden_nodes[pos].append(idx)
         nodes_positions[idx] = x, y
-        text = "SENS." if nodes[idx]["type"] == "SENSING" else "ACT."
+        text = "SENS." if nodes[idx]["type"].startswith("SENSING") else "ACT."
         draw.ellipse([(x - node_size, y - node_size), (x + node_size, y + node_size)],
                  outline="black", width=3, fill="green")
         draw.text((x - font.getsize(text)[0] / 2, y - font.getsize(text)[1] / 2), text, font=font, fill="black")
