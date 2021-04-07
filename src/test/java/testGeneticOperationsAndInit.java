@@ -58,7 +58,7 @@ public class testGeneticOperationsAndInit {
     @Test
     public void testEdgePerturbation() {
         MyController controller = getDefaultController();
-        MutateEdge mutation = new MutateEdge(0.1);
+        MutateEdge mutation = new MutateEdge(0.1, 0.0);
         MyController mutant = mutation.mutate(controller, random);
         Map<MyController.Edge, double[]> edges = controller.getNodeSet().stream().flatMap(n -> n.getIngoingEdges().stream()).collect(Collectors.toMap(Function.identity(), MyController.Edge::getParams));
         Map<MyController.Edge, double[]> newEdges = mutant.getNodeSet().stream().flatMap(n -> n.getIngoingEdges().stream()).collect(Collectors.toMap(Function.identity(), MyController.Edge::getParams));

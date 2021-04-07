@@ -2,7 +2,6 @@ package buildingBlocks;
 
 import it.units.malelab.jgea.core.IndependentFactory;
 import morphologies.Morphology;
-import it.units.erallab.hmsrobots.core.controllers.MultiLayerPerceptron;
 import it.units.erallab.hmsrobots.core.objects.SensingVoxel;
 import it.units.erallab.hmsrobots.util.Grid;
 

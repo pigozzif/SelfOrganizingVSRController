@@ -21,30 +21,41 @@ public class MyController implements Controller<SensingVoxel> {
         private double bias;
         @JsonProperty
         private final int source;
+        @JsonProperty
+        private int delay;
+        @JsonProperty
+        public static int maxDelay = 59;
 
         @JsonCreator
         public Edge(@JsonProperty("weight") double w,
                     @JsonProperty("bias") double b,
-                    @JsonProperty("source") int s) {
+                    @JsonProperty("source") int s,
+                    @JsonProperty("delay") int d) {
             weight = w;
             bias = b;
             source = s;
+            delay = d;
         }
 
         public Edge(Edge other) {
             weight = other.weight;
             bias = other.bias;
             source = other.source;
+            delay = other.delay;
         }
         // TODO: decide whether to keep array alltogether
         public double[] getParams() { return new double[] { weight, bias }; }
 
-        public void perturb(List<Double> params) {
+        public void perturbParams(List<Double> params) {
             weight = params.get(0);
             bias = params.get(1);
         }
 
+        public void perturbDelay(int d) { delay = d; }
+
         public int getSource() { return source; }
+
+        public int getDelay() { return delay; }
         // TODO: equals() and hashCode() are not well-defined!
     }
 
@@ -65,7 +76,7 @@ public class MyController implements Controller<SensingVoxel> {
         @JsonProperty
         protected double message;
         @JsonProperty
-        protected double cache;
+        protected double[] cache;
         @JsonProperty
         protected final int x;
         @JsonProperty
@@ -84,14 +95,14 @@ public class MyController implements Controller<SensingVoxel> {
             y = coord2;
             ingoingEdges = new ArrayList<>();
             message = 0.0;
-            cache = 0.0;
+            this.resetCache();
         }
 
         public Neuron(Neuron other) {
-            this(other.getIndex(), other.getActivation(), other.getX(), other.getY());
+            this(other.index, other.function, other.x, other.y);
             ingoingEdges = other.getIngoingEdges().stream().map(MyController.Edge::new).collect(Collectors.toList());
             message = 0.0;
-            cache = 0.0;
+            this.resetCache();
         }
         // TODO: call it forward?
         public abstract void compute(Grid<? extends SensingVoxel> voxels, MyController controller);
@@ -104,14 +115,15 @@ public class MyController implements Controller<SensingVoxel> {
 
         protected double propagate(MyController.Edge e, MyController controller) {
             double[] params = e.getParams();
-            return controller.getNodeSet().get(e.getSource()).send() * params[0] + params[1];
+            return controller.getNodeSet().get(e.getSource()).send(e.getDelay()) * params[0] + params[1];
         }
 
         public void advance() {
-            cache = message;
+            if (cache.length - 1 >= 0) System.arraycopy(cache, 0, cache, 1, cache.length - 1);
+            cache[0] = message;
         }
 
-        public double send() { return cache; }
+        public double send(int k) { return cache[k]; }
 
         public MultiLayerPerceptron.ActivationFunction getActivation() { return function; }
 
@@ -137,7 +149,12 @@ public class MyController implements Controller<SensingVoxel> {
 
         public void reset() {
             message = 0.0;
-            cache = 0.0;
+            this.resetCache();
+        }
+
+        protected void resetCache() {
+            cache = new double[Edge.maxDelay + 1];
+            Arrays.fill(cache, 0.0);
         }
         // TODO: maybe dict-like representation of key-value pairs
         @Override
@@ -284,7 +301,7 @@ public class MyController implements Controller<SensingVoxel> {
     public List<Edge> getEdgeSet() { return this.nodes.stream().flatMap(n -> n.getIngoingEdges().stream()).collect(Collectors.toList()); }
 
     public void addEdge(int source, int dest, double weight, double bias) {
-        Edge edge = new Edge(weight, bias, source);
+        Edge edge = new Edge(weight, bias, source, 0);
         this.nodes.get(dest).addIngoingEdge(edge);
     }
 

@@ -49,7 +49,7 @@ public class testIntegrationAndCompute {
         controller = (new AddNodeMutation(new WormMorphology(5, 1, "vel-area-touch"), () -> 1.0)).mutate(controller, random);
         controller = (new AddEdgeMutation(() -> 1.0)).mutate(controller, random);
         controller = (new MutateNode()).mutate(controller, random);
-        controller = (new MutateEdge(0.1)).mutate(controller, random);
+        controller = (new MutateEdge(0.1, 0.0)).mutate(controller, random);
         Robot<?> testRobot = new Robot<>(controller, (new WormMorphology(5, 5, "vel-area-touch")).getBody());
         Function<Robot<?>, Outcome> trainingTask = new Locomotion(episodeTime, Locomotion.createTerrain("flat"), physicsSettings);
         trainingTask.apply(testRobot);
@@ -63,15 +63,16 @@ public class testIntegrationAndCompute {
         List<MyController.Neuron> nodes = controller.getNodeSet();
         nodes.forEach(n -> n.compute(body, controller));
         double value = Math.tanh(1.0);
-        assertArrayEquals(new double[] {0.0, 0.0, 0.0, 0.0, 0.0}, nodes.stream().filter(MyController.Neuron::isActuator).mapToDouble(MyController.Neuron::send).toArray(), 0.00001);
+        assertArrayEquals(new double[] {0.0, 0.0, 0.0, 0.0, 0.0}, nodes.stream().filter(MyController.Neuron::isActuator).mapToDouble(n -> n.send(0)).toArray(), 0.00001);
         nodes.forEach(MyController.Neuron::advance);
-        assertArrayEquals(new double[] {value, value, value, value, value}, nodes.stream().filter(MyController.Neuron::isSensing).mapToDouble(MyController.Neuron::send).toArray(), 0.00001);
+        assertArrayEquals(new double[] {value, value, value, value, value}, nodes.stream().filter(MyController.Neuron::isSensing).mapToDouble(n -> n.send(0)).toArray(), 0.00001);
         body.forEach(v -> {if (v.getValue() != null) {v.getValue().act(1.0);}});
         nodes.forEach(n -> n.compute(body, controller));
-        assertArrayEquals(new double[] {value, value, value, value, value}, nodes.stream().filter(MyController.Neuron::isSensing).mapToDouble(MyController.Neuron::send).toArray(), 0.00001);
-        value = Math.tanh(value + 1.0);
+        assertArrayEquals(new double[] {value, value, value, value, value}, nodes.stream().filter(MyController.Neuron::isSensing).mapToDouble(n -> n.send(0)).toArray(), 0.00001);
         nodes.forEach(MyController.Neuron::advance);
-        assertArrayEquals(new double[] {value, value, value, value, value}, nodes.stream().filter(MyController.Neuron::isActuator).mapToDouble(MyController.Neuron::send).toArray(), 0.00001);
+        assertArrayEquals(new double[] {value, value, value, value, value}, nodes.stream().filter(MyController.Neuron::isSensing).mapToDouble(n -> n.send(1)).toArray(), 0.00001);
+        value = Math.tanh(value + 1.0);
+        assertArrayEquals(new double[] {value, value, value, value, value}, nodes.stream().filter(MyController.Neuron::isActuator).mapToDouble(n -> n.send(0)).toArray(), 0.00001);
     }
 
 }
