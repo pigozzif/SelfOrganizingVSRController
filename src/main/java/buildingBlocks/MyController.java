@@ -36,7 +36,7 @@ public class MyController implements Controller<SensingVoxel> {
             bias = other.bias;
             source = other.source;
         }
-        // TODO: decide whether to keep list alltogether
+        // TODO: decide whether to keep array alltogether
         public double[] getParams() { return new double[] { weight, bias }; }
 
         public void perturb(List<Double> params) {
@@ -254,22 +254,18 @@ public class MyController implements Controller<SensingVoxel> {
     @JsonProperty
     private final List<Neuron> nodes;
 
-    public static int flattenCoord(int x, int y, int width) {
-        return y * width + x;
-    }
-
     @JsonCreator
     public MyController(@JsonProperty("nodes") List<Neuron> n) {
-        nodes = new ArrayList<>();
+        this.nodes = new ArrayList<>();
         for (Neuron entry : n) {
             if (entry instanceof SensingNeuron) {
-                nodes.add(new SensingNeuron((SensingNeuron) entry));
+                this.nodes.add(new SensingNeuron((SensingNeuron) entry));
             }
             else if (entry instanceof ActuatorNeuron) {
-                nodes.add(new ActuatorNeuron((ActuatorNeuron) entry));
+                this.nodes.add(new ActuatorNeuron((ActuatorNeuron) entry));
             }
             else if (entry instanceof HiddenNeuron)  {
-                nodes.add(new HiddenNeuron((HiddenNeuron) entry));
+                this.nodes.add(new HiddenNeuron((HiddenNeuron) entry));
             }
             else {
                 throw new RuntimeException("Provided Neuron type not supported: " + n.getClass());
@@ -282,40 +278,65 @@ public class MyController implements Controller<SensingVoxel> {
     }
 
     public List<Neuron> getNodeSet() {
-        return nodes;
+        return this.nodes;
     }
+
+    public List<Edge> getEdgeSet() { return this.nodes.stream().flatMap(n -> n.getIngoingEdges().stream()).collect(Collectors.toList()); }
 
     public void addEdge(int source, int dest, double weight, double bias) {
         Edge edge = new Edge(weight, bias, source);
-        nodes.get(dest).addIngoingEdge(edge);
+        this.nodes.get(dest).addIngoingEdge(edge);
     }
 
     public Neuron addHiddenNode(MultiLayerPerceptron.ActivationFunction a, int x, int y) {
         Neuron newNode = new HiddenNeuron(this.nodes.size(), a, x, y);
-        nodes.add(newNode);
+        this.nodes.add(newNode);
         return newNode;
     }
 
     public Neuron addActuatorNode(int x, int y) {
         Neuron newNode = new ActuatorNeuron(this.nodes.size(), x, y);
-        nodes.add(newNode);
+        this.nodes.add(newNode);
         return newNode;
     }
 
     public Neuron addSensingNode(int x, int y, int s) {
         Neuron newNode = new SensingNeuron(this.nodes.size(), x, y, s);
-        nodes.add(newNode);
+        this.nodes.add(newNode);
         return newNode;
+    }
+
+    public boolean hasCycles() {
+        for (Neuron s : this.nodes.stream().filter(Neuron::isSensing).collect(Collectors.toList())) {
+            if (this.recursivelyVisit(s, new HashSet<>())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean recursivelyVisit(Neuron currentNode, Set<Neuron> visited) {
+        if (visited.contains(currentNode)) {
+            return true;
+        }
+        visited.add(currentNode);
+        this.nodes.stream().flatMap(n -> n.getIngoingEdges().stream().filter(e -> e.getSource() == currentNode.getIndex()).map(e -> this.nodes.get(e.getSource())))
+                .forEach(s -> {Set<Neuron> updated = new HashSet<>(visited); updated.add(s); this.recursivelyVisit(s, updated);});
+        return false;
     }
 
     public static double euclideanDistance(Neuron n1, Neuron n2) {
         return Math.sqrt(Math.pow(n1.getX() - n2.getX(), 2) + Math.pow(n1.getY() - n2.getY(), 2));
     }
 
+    public static int flattenCoord(int x, int y, int width) {
+        return y * width + x;
+    }
+
     @Override
     public void control(double t, Grid<? extends SensingVoxel> voxels) {
-        nodes.forEach(n -> n.compute(voxels, this));
-        nodes.forEach(Neuron::advance);
+        this.nodes.forEach(n -> n.compute(voxels, this));
+        this.nodes.forEach(Neuron::advance);
     }
 
     @Override

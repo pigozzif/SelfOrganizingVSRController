@@ -4,6 +4,7 @@ import geneticOps.AddEdgeMutation;
 import geneticOps.AddNodeMutation;
 import geneticOps.MutateEdge;
 import geneticOps.MutateNode;
+import it.units.malelab.jgea.core.operator.Mutation;
 import morphologies.WormMorphology;
 import org.junit.Test;
 
@@ -84,6 +85,16 @@ public class testGeneticOperationsAndInit {
         assertEquals(21, mutant.getNodeSet().stream().flatMap(n -> n.getIngoingEdges().stream()).toArray().length);
         for (MyController.Edge e: mutant.getNodeSet().stream().flatMap(n -> n.getIngoingEdges().stream()).toArray(MyController.Edge[]::new)) {
             assertTrue(mutant.getNodeSet().get(e.getSource()).isSensing());
+        }
+    }
+
+    @Test
+    public void testNoCycles() {
+        MyController controller = getDefaultController();
+        Mutation<MyController>[] operators = new Mutation[] {new AddEdgeMutation(() -> 1.0), new AddNodeMutation(new WormMorphology(5, 1, "vel-area-touch"), () -> 1.0)};
+        for (int i=0; i < 1000; ++i) {
+            controller = operators[random.nextInt(operators.length)].mutate(controller, random);
+            assertFalse(controller.hasCycles());
         }
     }
 

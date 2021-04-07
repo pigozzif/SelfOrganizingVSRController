@@ -20,7 +20,10 @@ public class MutateEdge implements Mutation<MyController> {
     @Override
     public MyController mutate(MyController parent, Random random) {
         MyController newBorn = new MyController(parent);
-        newBorn.getNodeSet().forEach(n -> n.getIngoingEdges().forEach(e -> e.perturb(mutation.mutate(this.extractParams(e), random))));
+        List<MyController.Edge> edges = newBorn.getEdgeSet();
+        MyController.Edge candidate = edges.get(random.nextInt(edges.size()));
+        candidate.perturb(mutation.mutate(this.extractParams(candidate), random));
+        //newBorn.getNodeSet().forEach(n -> n.getIngoingEdges().forEach(e -> e.perturb(mutation.mutate(this.extractParams(e), random))));
         return newBorn;
     }
 

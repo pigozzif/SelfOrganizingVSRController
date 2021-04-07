@@ -3,9 +3,7 @@ package geneticOps;
 import buildingBlocks.MyController;
 import it.units.malelab.jgea.core.operator.Mutation;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -26,7 +24,7 @@ public class AddEdgeMutation implements Mutation<MyController> {
         // TODO: for the moment, we don't allow outgoing edges from actuators
         MyController.Neuron source = nodes.get(indexes.stream().filter(i -> !nodes.get(i).isActuator()).findFirst().get());
         int target = nodes.get(indexes.stream().filter(i -> nodes.get(i).getIndex() != source.getIndex() &&
-                MyController.euclideanDistance(source, nodes.get(i)) <= 1.0 && !nodes.get(i).isSensing()).findFirst().get()).getIndex();
+                    MyController.euclideanDistance(source, nodes.get(i)) <= 1.0 && !nodes.get(i).isSensing()).findFirst().get()).getIndex();
         newBorn.addEdge(source.getIndex(), target, this.parameterSupplier.get(), this.parameterSupplier.get());
         return newBorn;
     }
