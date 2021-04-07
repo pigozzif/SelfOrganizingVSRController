@@ -64,7 +64,6 @@ public class VisualizeBrain {
         } catch (IOException ioException) {
             ioException.printStackTrace();
         }
-        System.out.println(intermediateFileName);
         Process p = Runtime.getRuntime().exec("python python/visualize_brain.py " + intermediateFileName + " " + outputFileName);
         p.waitFor();
     }
