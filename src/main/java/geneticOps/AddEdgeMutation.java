@@ -1,7 +1,6 @@
 package geneticOps;
 
 import buildingBlocks.MyController;
-import it.units.malelab.jgea.core.operator.Mutation;
 
 import java.util.*;
 import java.util.function.Supplier;
@@ -21,7 +20,7 @@ public class AddEdgeMutation extends StructuralMutation {
 
     @Override
     public MyController mutate(MyController parent, Random random) {
-        ++innovationCounter;
+        ++INNOVATION_COUNTER;
         MyController newBorn = new MyController(parent);
         if (random.nextDouble() <= this.perc) {
             this.addMutation(newBorn, random);
@@ -40,7 +39,7 @@ public class AddEdgeMutation extends StructuralMutation {
         MyController.Neuron source = nodes.get(indexes.stream().filter(i -> !nodes.get(i).isActuator()).findFirst().get());
         int target = nodes.get(indexes.stream().filter(i -> nodes.get(i).getIndex() != source.getIndex() &&
                 MyController.euclideanDistance(source, nodes.get(i)) <= 1.0 && !nodes.get(i).isSensing()).findFirst().get()).getIndex();
-        controller.addEdge(source.getIndex(), target, this.parameterSupplier.get(), this.parameterSupplier.get(), innovationCounter);
+        controller.addEdge(source.getIndex(), target, this.parameterSupplier.get(), this.parameterSupplier.get(), INNOVATION_COUNTER);
     }
     // TODO: might be the source of incorrect results for tests, still to verify
     private void enableAndDisableMutation(MyController controller, Random random) {

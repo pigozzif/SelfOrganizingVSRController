@@ -12,8 +12,8 @@ import java.util.stream.Collectors;
 
 
 public class MyController implements Controller<SensingVoxel> {
-
-    public interface Innovated extends Comparable<Innovated> {
+    // TODO: maybe not ideal location this
+    private interface Innovated extends Comparable<Innovated> {
 
         int getInnovation();
 
@@ -259,6 +259,8 @@ public class MyController implements Controller<SensingVoxel> {
             numSensor = other.numSensor;
         }
 
+        public int getNumSensor() { return numSensor; }
+
         @Override
         public void compute(Grid<? extends SensingVoxel> voxels, MyController controller) {
             SensingVoxel voxel = voxels.get(x, y);
@@ -328,7 +330,7 @@ public class MyController implements Controller<SensingVoxel> {
                 this.nodes.put(entry.getIndex(), new HiddenNeuron((HiddenNeuron) entry));
             }
             else {
-                throw new RuntimeException("Provided Neuron type not supported: " + n.getClass());
+                throw new RuntimeException("Neuron type not supported: " + n.getClass());
             }
         }
     }
@@ -354,9 +356,13 @@ public class MyController implements Controller<SensingVoxel> {
 
     public Neuron addHiddenNode(MultiLayerPerceptron.ActivationFunction a, int x, int y, int inn) {
         int idx = this.nodes.size();
-        Neuron newNode = new HiddenNeuron(idx, MultiLayerPerceptron.ActivationFunction.SIGMOID, x, y, inn);
+        Neuron newNode = new HiddenNeuron(idx, a, x, y, inn);
         this.nodes.put(idx, newNode);
         return newNode;
+    }
+
+    public Neuron addHiddenNode(int x, int y, int inn) {
+        return this.addHiddenNode(MultiLayerPerceptron.ActivationFunction.SIGMOID, x, y, inn);
     }
 
     public Neuron addActuatorNode(int x, int y, int inn) {
@@ -372,7 +378,7 @@ public class MyController implements Controller<SensingVoxel> {
         this.nodes.put(idx, newNode);
         return newNode;
     }
-
+    // TODO: strong suspect this could be sped up
     public boolean hasCycles() {
         for (Neuron s : this.getNodeSet().stream().filter(Neuron::isSensing).collect(Collectors.toList())) {
             if (this.recursivelyVisit(s, new HashSet<>())) {

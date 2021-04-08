@@ -1,9 +1,6 @@
 import buildingBlocks.ControllerFactory;
 import buildingBlocks.MyController;
-import geneticOps.AddEdgeMutation;
-import geneticOps.AddNodeMutation;
-import geneticOps.MutateEdge;
-import geneticOps.MutateNode;
+import geneticOps.*;
 import morphologies.WormMorphology;
 import org.junit.Test;
 
@@ -20,6 +17,10 @@ public class testGeneticOperationsAndInit {
 
     private static MyController getDefaultController() {
         return new ControllerFactory(random::nextDouble, 1.0, new WormMorphology(5, 1, "vel-area-touch")).build(random);
+    }
+
+    private static MyController getIdentityController(double fixedParam) {
+        return new ControllerFactory(() -> fixedParam, 1.0, new WormMorphology(5, 1, "vel-area-touch")).build(random);
     }
 
     @Test
@@ -59,8 +60,8 @@ public class testGeneticOperationsAndInit {
         MyController controller = getDefaultController();
         MutateEdge mutation = new MutateEdge(0.1, 0.0);
         MyController mutant = mutation.mutate(controller, random);
-        Map<MyController.Edge, double[]> edges = controller.getNodeSet().stream().flatMap(n -> n.getIngoingEdges().stream()).collect(Collectors.toMap(Function.identity(), MyController.Edge::getParams));
-        Map<MyController.Edge, double[]> newEdges = mutant.getNodeSet().stream().flatMap(n -> n.getIngoingEdges().stream()).collect(Collectors.toMap(Function.identity(), MyController.Edge::getParams));
+        Map<MyController.Edge, double[]> edges = controller.getEdgeSet().stream().collect(Collectors.toMap(Function.identity(), MyController.Edge::getParams));
+        Map<MyController.Edge, double[]> newEdges = mutant.getEdgeSet().stream().collect(Collectors.toMap(Function.identity(), MyController.Edge::getParams));
         for (Map.Entry<MyController.Edge, double[]> entry : edges.entrySet()) {
             assertFalse(Arrays.equals(entry.getValue(), newEdges.get(entry.getKey())));
         }
@@ -81,9 +82,58 @@ public class testGeneticOperationsAndInit {
         MyController controller = getDefaultController();
         AddEdgeMutation mutation = new AddEdgeMutation(() -> 1.0, 1.0);
         MyController mutant = mutation.mutate(controller, random);
-        assertEquals(21, mutant.getNodeSet().stream().flatMap(n -> n.getIngoingEdges().stream()).toArray().length);
-        for (MyController.Edge e: mutant.getNodeSet().stream().flatMap(n -> n.getIngoingEdges().stream()).toArray(MyController.Edge[]::new)) {
+        assertEquals(21, mutant.getEdgeSet().size());
+        for (MyController.Edge e: mutant.getEdgeSet()) {
             assertTrue(mutant.getNodeMap().get(e.getSource()).isSensing());
+        }
+    }
+
+    @Test
+    public void testCrossoverWithInoovationSimple() {
+        MyController mother = getIdentityController(1.0);
+        MyController father = getIdentityController(2.0);
+        CrossoverWithInnovation crossoverWithInnovation = new CrossoverWithInnovation();
+        MyController newBorn = crossoverWithInnovation.recombine(mother, father, random);
+        assertEquals(25, newBorn.getNodeSet().size());
+        assertEquals(20, newBorn.getEdgeSet().size());
+        for (MyController.Neuron n : newBorn.getNodeSet()) {
+            assertEquals(0, n.getInnovation());
+        }
+        for (MyController.Edge e : newBorn.getEdgeSet()) {
+            assertEquals(0, e.getInnovation());
+        }
+        for (int i=0; i < 25; ++i) {
+            assertTrue(newBorn.getNodeMap().containsKey(i));
+        }
+    }
+
+    @Test
+    public void testCrossoverWithInnovationComplex() {
+        MyController mother = getIdentityController(1.0);
+        MyController father = getIdentityController(2.0);
+        CrossoverWithInnovation crossoverWithInnovation = new CrossoverWithInnovation();
+        AddEdgeMutation edgeMutation = new AddEdgeMutation(() -> 1.0, 1.0);
+        AddNodeMutation nodeMutation = new AddNodeMutation(new WormMorphology(5, 1, "vel-area-touch"), () -> 1.0);
+        for (int i=0; i < 50; ++i) {
+            if (i % 2 != 0) {
+                father = edgeMutation.mutate(father, random);
+                mother = edgeMutation.mutate(mother, random);
+            }
+            else {
+                father = nodeMutation.mutate(father, random);
+                mother = nodeMutation.mutate(mother, random);
+            }
+        }
+        MyController newBorn = crossoverWithInnovation.recombine(mother, father, random);
+        assertEquals(75, newBorn.getNodeSet().size());
+        assertEquals(170, newBorn.getEdgeSet().size());
+        List<Integer> innovations = newBorn.getNodeSet().stream().map(MyController.Neuron::getInnovation).collect(Collectors.toList());
+        for (int i=0; i <= 100; ++i) {
+            assertTrue(innovations.contains(i));
+        }
+        List<Integer> indexes = newBorn.getNodeSet().stream().map(MyController.Neuron::getIndex).collect(Collectors.toList());
+        for (int i=0; i <= 100; ++i) {
+            assertTrue(indexes.contains(i));
         }
     }
 
