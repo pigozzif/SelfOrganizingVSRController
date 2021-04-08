@@ -2,7 +2,6 @@ package buildingBlocks;
 
 import it.units.malelab.jgea.core.IndependentFactory;
 import morphologies.Morphology;
-import it.units.erallab.hmsrobots.core.controllers.MultiLayerPerceptron;
 import it.units.erallab.hmsrobots.core.objects.SensingVoxel;
 import it.units.erallab.hmsrobots.util.Grid;
 
@@ -13,12 +12,14 @@ import java.util.function.Supplier;
 public class ControllerFactory implements IndependentFactory<MyController> {
 
     private final Supplier<Double> parameterSupplier;
-    private final double fillPerc;
+    private final double fillPercInside;
+    private final double fillPercAdjacent;
     private final Morphology morphology;
 
-    public ControllerFactory(Supplier<Double> s, double p, Morphology morph) {
+    public ControllerFactory(Supplier<Double> s, double pi, double po, Morphology morph) {
         this.parameterSupplier = s;
-        this.fillPerc = p;
+        this.fillPercInside = pi;
+        this.fillPercAdjacent = po;
         this.morphology = morph;
     }
 
@@ -36,15 +37,31 @@ public class ControllerFactory implements IndependentFactory<MyController> {
             }
             controller.addActuatorNode(x, y);
         }
+        this.initInVoxelEdges(controller, random);
+        this.initAdjacentVoxelEdges(controller, random);
+        return controller;
+    }
+
+    private void initInVoxelEdges(MyController controller, Random random) {
         for (MyController.Neuron n1 : controller.getNodeSet()) {
             for (MyController.Neuron n2 : controller.getNodeSet()) {
                 if (n1.isSensing() && n2.isActuator() &&
-                                n1.getX() == n2.getX() && n1.getY() == n2.getY() && random.nextDouble() < this.fillPerc) {
+                        n1.getX() == n2.getX() && n1.getY() == n2.getY() && random.nextDouble() < this.fillPercInside) {
                     controller.addEdge(n1.getIndex(), n2.getIndex(), this.parameterSupplier.get(), this.parameterSupplier.get());
                 }
             }
         }
-        return controller;
+    }
+
+    private void initAdjacentVoxelEdges(MyController controller, Random random) {
+        for (MyController.Neuron n1 : controller.getNodeSet()) {
+            for (MyController.Neuron n2 : controller.getNodeSet()) {
+                if (n1.isSensing() && n2.isActuator() &&
+                        MyController.euclideanDistance(n1, n2) <= 1.0 && random.nextDouble() < this.fillPercAdjacent) {
+                    controller.addEdge(n1.getIndex(), n2.getIndex(), this.parameterSupplier.get(), this.parameterSupplier.get());
+                }
+            }
+        }
     }
 
 }
