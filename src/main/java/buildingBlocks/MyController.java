@@ -24,7 +24,9 @@ public class MyController implements Controller<SensingVoxel> {
         @JsonProperty
         private int delay;
         @JsonProperty
-        public static int maxDelay = 59;
+        public static int maxDelay = 0;
+        @JsonProperty
+        private boolean enabled;
 
         @JsonCreator
         public Edge(@JsonProperty("weight") double w,
@@ -35,6 +37,7 @@ public class MyController implements Controller<SensingVoxel> {
             bias = b;
             source = s;
             delay = d;
+            enabled = true;
         }
 
         public Edge(Edge other) {
@@ -42,6 +45,7 @@ public class MyController implements Controller<SensingVoxel> {
             bias = other.bias;
             source = other.source;
             delay = other.delay;
+            enabled = other.enabled;
         }
         // TODO: decide whether to keep array alltogether
         public double[] getParams() { return new double[] { weight, bias }; }
@@ -57,6 +61,9 @@ public class MyController implements Controller<SensingVoxel> {
 
         public int getDelay() { return delay; }
         // TODO: equals() and hashCode() are not well-defined!
+        public boolean isEnabled() { return enabled; }
+
+        public void perturbAbility() { enabled = !enabled; }
     }
 
     @JsonIgnoreProperties(ignoreUnknown=true)
@@ -73,9 +80,7 @@ public class MyController implements Controller<SensingVoxel> {
         protected List<MyController.Edge> ingoingEdges;
         @JsonProperty
         protected MultiLayerPerceptron.ActivationFunction function;
-        @JsonProperty
         protected double message;
-        @JsonProperty
         protected double[] cache;
         @JsonProperty
         protected final int x;
@@ -84,7 +89,6 @@ public class MyController implements Controller<SensingVoxel> {
         @JsonProperty
         protected final int index;
 
-        //@JsonCreator
         public Neuron(@JsonProperty("index") int idx,
                       @JsonProperty("function") MultiLayerPerceptron.ActivationFunction a,
                       @JsonProperty("x") int coord1,
@@ -182,7 +186,7 @@ public class MyController implements Controller<SensingVoxel> {
         @Override
         public void compute(Grid<? extends SensingVoxel> voxels, MyController controller) {
             SensingVoxel voxel = voxels.get(x, y);
-            message = function.apply(ingoingEdges.stream().mapToDouble(e -> this.propagate(e, controller)).sum());
+            message = function.apply(ingoingEdges.stream().filter(Edge::isEnabled).mapToDouble(e -> this.propagate(e, controller)).sum());
             voxel.applyForce(message);
         }
 
@@ -252,7 +256,7 @@ public class MyController implements Controller<SensingVoxel> {
 
         @Override
         public void compute(Grid<? extends SensingVoxel> voxels, MyController controller) {
-            message = function.apply(ingoingEdges.stream().mapToDouble(e -> this.propagate(e, controller)).sum());
+            message = function.apply(ingoingEdges.stream().filter(Edge::isEnabled).mapToDouble(e -> this.propagate(e, controller)).sum());
         }
 
         @Override
@@ -306,7 +310,7 @@ public class MyController implements Controller<SensingVoxel> {
     }
 
     public Neuron addHiddenNode(MultiLayerPerceptron.ActivationFunction a, int x, int y) {
-        Neuron newNode = new HiddenNeuron(this.nodes.size(), a, x, y);
+        Neuron newNode = new HiddenNeuron(this.nodes.size(), MultiLayerPerceptron.ActivationFunction.SIGMOID, x, y);
         this.nodes.add(newNode);
         return newNode;
     }

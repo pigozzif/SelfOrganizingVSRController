@@ -70,7 +70,7 @@ public class testIntegrationAndCompute {
         nodes.forEach(n -> n.compute(body, controller));
         assertArrayEquals(new double[] {value, value, value, value, value}, nodes.stream().filter(MyController.Neuron::isSensing).mapToDouble(n -> n.send(0)).toArray(), 0.00001);
         nodes.forEach(MyController.Neuron::advance);
-        assertArrayEquals(new double[] {value, value, value, value, value}, nodes.stream().filter(MyController.Neuron::isSensing).mapToDouble(n -> n.send(1)).toArray(), 0.00001);
+        //assertArrayEquals(new double[] {value, value, value, value, value}, nodes.stream().filter(MyController.Neuron::isSensing).mapToDouble(n -> n.send(1)).toArray(), 0.00001);
         value = Math.tanh(value + 1.0);
         assertArrayEquals(new double[] {value, value, value, value, value}, nodes.stream().filter(MyController.Neuron::isActuator).mapToDouble(n -> n.send(0)).toArray(), 0.00001);
     }
