@@ -75,7 +75,7 @@ public class OldMain extends Worker {
         RobotMapper mapper = new RobotMapper(morph);
         Settings physicsSettings = new Settings();
         Evolver<MyController, Robot<?>, Outcome> evolver = new StandardEvolver<>(mapper, factory, PartialComparator.from(Double.class).reversed().comparing(i -> i.getFitness().getDistance()),
-                100, Map.of(new AddNodeMutation(morph, parameterSupplier), 0.25, new AddEdgeMutation(parameterSupplier), 0.25, new MutateEdge(0.35), 0.25, new MutateNode(), 0.25),
+                100, Map.of(new AddNodeMutation(morph, parameterSupplier), 0.25, new AddEdgeMutation(parameterSupplier, 1.0), 0.25, new MutateEdge(0.35, 0.0), 0.25, new MutateNode(), 0.25),
                 new Tournament(5), new Worst(), 100, true, true);
         Function<Robot<?>, Outcome> trainingTask = new Locomotion(episodeTime, Locomotion.createTerrain("flat"), physicsSettings);
         L.info(String.format("Starting evolution with %s", outputFile));

@@ -24,7 +24,7 @@ public class ControllerFactory implements IndependentFactory<MyController> {
 
     @Override
     public MyController build(Random random) {
-        MyController controller = new MyController(Collections.emptyList());
+        MyController controller = new MyController(Collections.emptyMap());
         for (Grid.Entry<? extends SensingVoxel> voxel : this.morphology.getBody()) {
             if (voxel.getValue() == null) {
                 continue;
@@ -32,9 +32,9 @@ public class ControllerFactory implements IndependentFactory<MyController> {
             int x = voxel.getX();
             int y = voxel.getY();
             for (int i = 0; i < this.morphology.getNumSensors()[MyController.flattenCoord(x, y, this.morphology.getBody().getW())]; ++i) {
-                controller.addSensingNode(x, y, i);
+                controller.addSensingNode(x, y, i, 0);
             }
-            controller.addActuatorNode(x, y);
+            controller.addActuatorNode(x, y, 0);
         }
         for (MyController.Neuron n1 : controller.getNodeSet()) {
             for (MyController.Neuron n2 : controller.getNodeSet()) {

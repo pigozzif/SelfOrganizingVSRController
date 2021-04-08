@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 
-public class AddNodeMutation implements Mutation<MyController> {
+public class AddNodeMutation extends StructuralMutation {
 
     private final Morphology morphology;
     private final MultiLayerPerceptron.ActivationFunction[] functions;
@@ -27,10 +27,11 @@ public class AddNodeMutation implements Mutation<MyController> {
 
     @Override
     public MyController mutate(MyController parent, Random random) {
+        ++innovationCounter;
         Morphology.Pair sample = morphology.getAllowedMorph().get(random.nextInt(morphology.getAllowedMorph().size()));
         MultiLayerPerceptron.ActivationFunction a = functions[random.nextInt(functions.length)];
         MyController newBorn = new MyController(parent);
-        MyController.Neuron newNode = newBorn.addHiddenNode(a, sample.first, sample.second);
+        MyController.Neuron newNode = newBorn.addHiddenNode(a, sample.first, sample.second, innovationCounter);
         List<MyController.Neuron> candidates = newBorn.getNodeSet().stream().filter(n -> newNode.getIndex() != n.getIndex() && MyController.euclideanDistance(newNode, n) <= 1.0)
                 .collect(Collectors.toList());
         List<Integer> indexes = IntStream.range(0, candidates.size()).boxed().collect(Collectors.toList());
