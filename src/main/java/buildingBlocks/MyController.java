@@ -55,11 +55,11 @@ public class MyController implements Controller<SensingVoxel> {
             bias = params.get(1);
         }
 
+        public int getDelay() { return delay; }
+
         public void perturbDelay(int d) { delay = d; }
 
         public int getSource() { return source; }
-
-        public int getDelay() { return delay; }
         // TODO: equals() and hashCode() are not well-defined!
         public boolean isEnabled() { return enabled; }
 
@@ -67,9 +67,8 @@ public class MyController implements Controller<SensingVoxel> {
     }
 
     @JsonIgnoreProperties(ignoreUnknown=true)
-    @JsonTypeInfo(
-            use = JsonTypeInfo.Id.NAME,
-            include = JsonTypeInfo.As.PROPERTY)
+    @JsonTypeInfo(use=JsonTypeInfo.Id.NAME,
+            include=JsonTypeInfo.As.PROPERTY)
     @JsonSubTypes({
             @JsonSubTypes.Type(value=ActuatorNeuron.class, name="actuator"),
             @JsonSubTypes.Type(value=SensingNeuron.class, name="sensing"),
@@ -98,15 +97,13 @@ public class MyController implements Controller<SensingVoxel> {
             x = coord1;
             y = coord2;
             ingoingEdges = new ArrayList<>();
-            message = 0.0;
-            this.resetCache();
+            this.resetState();
         }
 
         public Neuron(Neuron other) {
             this(other.index, other.function, other.x, other.y);
             ingoingEdges = other.getIngoingEdges().stream().map(MyController.Edge::new).collect(Collectors.toList());
-            message = 0.0;
-            this.resetCache();
+            this.resetState();
         }
         // TODO: call it forward?
         public abstract void compute(Grid<? extends SensingVoxel> voxels, MyController controller);
@@ -151,12 +148,8 @@ public class MyController implements Controller<SensingVoxel> {
             return y;
         }
 
-        public void reset() {
+        protected void resetState() {
             message = 0.0;
-            this.resetCache();
-        }
-
-        protected void resetCache() {
             cache = new double[Edge.maxDelay + 1];
             Arrays.fill(cache, 0.0);
         }
@@ -362,7 +355,7 @@ public class MyController implements Controller<SensingVoxel> {
 
     @Override
     public void reset() {
-        this.getNodeSet().forEach(Neuron::reset);
+        this.getNodeSet().forEach(Neuron::resetState);
     }
 
 }

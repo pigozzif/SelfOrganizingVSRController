@@ -25,11 +25,11 @@ public class testIntegrationAndCompute {
     private static final Random random = new Random(0);
 
     private static MyController getDefaultController() {
-        return new ControllerFactory(random::nextDouble, 1.0, new WormMorphology(5, 1, "vel-area-touch")).build(random);
+        return new ControllerFactory(random::nextDouble, 1.0, 0.0, new WormMorphology(5, 1, "vel-area-touch")).build(random);
     }
 
     private static MyController getIdentityController() {
-        return new ControllerFactory(() -> 1.0, 1.0, new WormMorphology(5, 1, "const")).build(random);
+        return new ControllerFactory(() -> 1.0, 1.0, 0.0, new WormMorphology(5, 1, "const")).build(random);
     }
 
     @Test(expected=Test.None.class /* no exception expected */)
@@ -47,7 +47,7 @@ public class testIntegrationAndCompute {
         Settings physicsSettings = new Settings();
         MyController controller = getDefaultController();
         controller = (new AddNodeMutation(new WormMorphology(5, 1, "vel-area-touch"), () -> 1.0)).mutate(controller, random);
-        controller = (new AddEdgeMutation(() -> 1.0)).mutate(controller, random);
+        controller = (new AddEdgeMutation(() -> 1.0, 1.0)).mutate(controller, random);
         controller = (new MutateNode()).mutate(controller, random);
         controller = (new MutateEdge(0.1, 0.0)).mutate(controller, random);
         Robot<?> testRobot = new Robot<>(controller, (new WormMorphology(5, 5, "vel-area-touch")).getBody());

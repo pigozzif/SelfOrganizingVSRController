@@ -20,7 +20,7 @@ public class testGeneticOperationsAndInit {
     private static final Random random = new Random(0);
 
     private static MyController getDefaultController() {
-        return new ControllerFactory(random::nextDouble, 1.0, new WormMorphology(5, 1, "vel-area-touch")).build(random);
+        return new ControllerFactory(random::nextDouble, 1.0, 0.0, new WormMorphology(5, 1, "vel-area-touch")).build(random);
     }
 
     @Test
@@ -80,7 +80,7 @@ public class testGeneticOperationsAndInit {
     @Test
     public void testAddEdgeMutation() {
         MyController controller = getDefaultController();
-        AddEdgeMutation mutation = new AddEdgeMutation(() -> 1.0);
+        AddEdgeMutation mutation = new AddEdgeMutation(() -> 1.0, 1.0);
         MyController mutant = mutation.mutate(controller, random);
         assertEquals(21, mutant.getNodeSet().stream().flatMap(n -> n.getIngoingEdges().stream()).toArray().length);
         for (MyController.Edge e: mutant.getNodeSet().stream().flatMap(n -> n.getIngoingEdges().stream()).toArray(MyController.Edge[]::new)) {
@@ -91,7 +91,7 @@ public class testGeneticOperationsAndInit {
     @Test
     public void testNoCycles() {
         MyController controller = getDefaultController();
-        Mutation<MyController>[] operators = new Mutation[] {new AddEdgeMutation(() -> 1.0), new AddNodeMutation(new WormMorphology(5, 1, "vel-area-touch"), () -> 1.0)};
+        Mutation<MyController>[] operators = new Mutation[] {new AddEdgeMutation(() -> 1.0, 1.0), new AddNodeMutation(new WormMorphology(5, 1, "vel-area-touch"), () -> 1.0)};
         for (int i=0; i < 1000; ++i) {
             controller = operators[random.nextInt(operators.length)].mutate(controller, random);
             assertFalse(controller.hasCycles());

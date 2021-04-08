@@ -12,13 +12,17 @@ import java.util.stream.IntStream;
 public class AddEdgeMutation implements Mutation<MyController> {
 
     private final Supplier<Double> parameterSupplier;
+    private final double perc;
 
-    public AddEdgeMutation(Supplier<Double> s) { this.parameterSupplier = s; }
+    public AddEdgeMutation(Supplier<Double> s, double p) {
+        this.parameterSupplier = s;
+        this.perc = p;
+    }
 
     @Override
     public MyController mutate(MyController parent, Random random) {
         MyController newBorn = new MyController(parent);
-        if (random.nextDouble() >= 0.5) {
+        if (random.nextDouble() <= this.perc) {
             return this.addMutation(newBorn, random);
         }
         return this.enableAndDisableMutation(newBorn, random);
@@ -35,7 +39,7 @@ public class AddEdgeMutation implements Mutation<MyController> {
         controller.addEdge(source.getIndex(), target, this.parameterSupplier.get(), this.parameterSupplier.get());
         return controller;
     }
-
+    // TODO: might be the source of incorrect results for tests, still to verify
     private MyController enableAndDisableMutation(MyController controller, Random random) {
         List<MyController.Edge> edges = controller.getEdgeSet();
         MyController.Edge candidate = edges.get(random.nextInt(edges.size()));
