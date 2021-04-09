@@ -45,12 +45,12 @@ public class testGeneticOperationsAndInit {
         MyController controller = getDefaultController();
         AddNodeMutation mutation = new AddNodeMutation(new WormMorphology(5, 1, "vel-area-touch"), () -> 1.0);
         MyController mutant = mutation.mutate(controller, random);
-        List<MyController.Neuron> nodes = new ArrayList<>(mutant.getNodeSet());
+        Map<Integer, MyController.Neuron> nodes = mutant.getNodeMap();
         assertEquals(26, nodes.size());
-        MyController.Neuron[] candidates = nodes.stream().filter(MyController.Neuron::isHidden).toArray(MyController.Neuron[]::new);
+        MyController.Neuron[] candidates = nodes.values().stream().filter(MyController.Neuron::isHidden).toArray(MyController.Neuron[]::new);
         assertEquals(1, candidates.length);
         assertTrue(nodes.get(candidates[0].getIngoingEdges().get(0).getSource()).isSensing());
-        candidates = nodes.stream().filter(n -> n.isActuator() & n.getIngoingEdges().size() == 5).toArray(MyController.Neuron[]::new);
+        candidates = nodes.values().stream().filter(n -> n.isActuator() & n.getIngoingEdges().size() == 5).toArray(MyController.Neuron[]::new);
         assertEquals(1, candidates.length);
         assertTrue(nodes.get(candidates[0].getIngoingEdges().get(4).getSource()).isHidden());
     }

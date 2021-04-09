@@ -2,7 +2,6 @@ package buildingBlocks;
 
 import it.units.malelab.jgea.core.IndependentFactory;
 import morphologies.Morphology;
-import it.units.erallab.hmsrobots.core.controllers.MultiLayerPerceptron;
 import it.units.erallab.hmsrobots.core.objects.SensingVoxel;
 import it.units.erallab.hmsrobots.util.Grid;
 
@@ -32,9 +31,9 @@ public class ControllerFactory implements IndependentFactory<MyController> {
             int x = voxel.getX();
             int y = voxel.getY();
             for (int i = 0; i < this.morphology.getNumSensors()[MyController.flattenCoord(x, y, this.morphology.getBody().getW())]; ++i) {
-                controller.addSensingNode(x, y, i, 0);
+                controller.addSensingNode(x, y, i);
             }
-            controller.addActuatorNode(x, y, 0);
+            controller.addActuatorNode(x, y);
         }
         for (MyController.Neuron n1 : controller.getNodeSet()) {
             for (MyController.Neuron n2 : controller.getNodeSet()) {

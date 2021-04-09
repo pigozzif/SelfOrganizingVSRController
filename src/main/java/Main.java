@@ -228,7 +228,7 @@ public class Main extends Worker {
                 ControllerFactory genotypeFactory = new ControllerFactory(parameterSupplier, initPerc, morph);
                 RobotMapper mapper = new RobotMapper(morph);
                 Evolver<MyController, Robot<?>, Outcome> evolver = new StandardEvolver<>(mapper, genotypeFactory, PartialComparator.from(Double.class).reversed().comparing(i -> i.getFitness().getVelocity()),
-                        popSize, Map.of(new AddNodeMutation(morph, parameterSupplier), 0.1, new AddEdgeMutation(parameterSupplier, 1.0), 0.1, new MutateEdge(0.35, 0.0), 0.8),// new MutateNode(), 0.25),
+                        popSize, Map.of(new AddNodeMutation(morph, parameterSupplier), 0.1, new AddEdgeMutation(parameterSupplier, 1.0), 0.1, new MutateEdge(0.35, 0.25), 0.8),// new MutateNode(), 0.25),
                         new Tournament(5), new Worst(), popSize, true, true);
                 Listener<Event<?, ? extends Robot<?>, ? extends Outcome>> listener = Listener.all(List.of(factory.build()));
                 //optimize

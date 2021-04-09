@@ -1,6 +1,7 @@
 package buildingBlocks;
 
 import com.fasterxml.jackson.annotation.*;
+import geneticOps.Innovated;
 import it.units.erallab.hmsrobots.core.controllers.Controller;
 import it.units.erallab.hmsrobots.core.controllers.MultiLayerPerceptron;
 import it.units.erallab.hmsrobots.core.objects.SensingVoxel;
@@ -8,24 +9,14 @@ import it.units.erallab.hmsrobots.util.Grid;
 
 import java.io.Serializable;
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 
 public class MyController implements Controller<SensingVoxel> {
-    // TODO: maybe not ideal location this
-    private interface Innovated extends Comparable<Innovated> {
-
-        int getInnovation();
-
-        @Override
-        default int compareTo(Innovated other) {
-            return Integer.compare(getInnovation(), other.getInnovation());
-        }
-
-    }
     // TODO: implement toString()
     // TODO: maybe better representation would be to also have a list of edges, and nodes have a list of edge indexes, but too much for the moment
-    public static class Edge implements Innovated, Serializable {
+    public static class Edge extends Innovated implements Serializable {
         @JsonProperty
         private double weight;
         @JsonProperty
@@ -36,10 +27,9 @@ public class MyController implements Controller<SensingVoxel> {
         @JsonProperty
         private int delay;
         @JsonProperty
-        public static int MAX_DELAY = 0;
+        public static int MAX_DELAY = 59;
         @JsonProperty
         private boolean enabled;
-        private final int innovation;
 
         @JsonCreator
         public Edge(@JsonProperty("weight") double w,
@@ -47,28 +37,30 @@ public class MyController implements Controller<SensingVoxel> {
                     @JsonProperty("source") int s,
                     int t,
                     @JsonProperty("delay") int d,
-                    int inn) {
+                    int innX, int innY) {
+            this(w, b, s, t, d);
+            this.setInnovation(innX, innY);
+        }
+
+        public Edge(@JsonProperty("weight") double w,
+                    @JsonProperty("bias") double b,
+                    @JsonProperty("source") int s,
+                    int t,
+                    @JsonProperty("delay") int d) {
+            super();
             weight = w;
             bias = b;
             source = s;
             target = t;
             delay = d;
             enabled = true;
-            innovation = inn;
         }
 
         public Edge(Edge other) {
-            weight = other.weight;
-            bias = other.bias;
-            source = other.source;
-            target = other.target;
-            delay = other.delay;
-            enabled = other.enabled;
-            innovation = other.innovation;
+            this(other.weight, other.bias, other.source, other.target, other.delay);
+            enabled = true;  // not necessary
+            this.setInnovation(other.event);
         }
-
-        @Override
-        public int getInnovation() { return innovation; }
         // TODO: decide whether to keep array alltogether
         public double[] getParams() { return new double[] { weight, bias }; }
 
@@ -98,39 +90,47 @@ public class MyController implements Controller<SensingVoxel> {
             @JsonSubTypes.Type(value=SensingNeuron.class, name="sensing"),
             @JsonSubTypes.Type(value=HiddenNeuron.class, name="hidden")
     })
-    public abstract static class Neuron implements Innovated, Serializable {
+    public abstract static class Neuron extends Innovated implements Serializable {
         @JsonProperty
         protected List<MyController.Edge> ingoingEdges;
         @JsonProperty
         protected MultiLayerPerceptron.ActivationFunction function;
-        protected double message;
-        protected double[] cache;
+        protected transient double message;
+        protected transient double[] cache;
         @JsonProperty
         protected final int x;
         @JsonProperty
         protected final int y;
         @JsonProperty
         protected final int index;
-        protected final int innovation;
 
         public Neuron(@JsonProperty("index") int idx,
                       @JsonProperty("function") MultiLayerPerceptron.ActivationFunction a,
                       @JsonProperty("x") int coord1,
                       @JsonProperty("y") int coord2,
-                      int inn) {
+                      int innX, int innY) {
+            this(idx, a, coord1, coord2);
+            this.setInnovation(innX, innY);
+        }
+
+        public Neuron(@JsonProperty("index") int idx,
+                      @JsonProperty("function") MultiLayerPerceptron.ActivationFunction a,
+                      @JsonProperty("x") int coord1,
+                      @JsonProperty("y") int coord2) {
+            super();
             index = idx;
             function = a;
             x = coord1;
             y = coord2;
             ingoingEdges = new ArrayList<>();
             this.resetState();
-            innovation = inn;
         }
 
         public Neuron(Neuron other) {
-            this(other.index, other.function, other.x, other.y, other.innovation);
+            this(other.index, other.function, other.x, other.y);
             ingoingEdges = other.getIngoingEdges().stream().map(MyController.Edge::new).collect(Collectors.toList());
             this.resetState();
+            this.setInnovation(other.event);
         }
         // TODO: call it forward?
         public abstract void compute(Grid<? extends SensingVoxel> voxels, MyController controller);
@@ -175,14 +175,11 @@ public class MyController implements Controller<SensingVoxel> {
             return y;
         }
 
-        protected void resetState() {
+        public void resetState() {
             message = 0.0;
             cache = new double[Edge.MAX_DELAY + 1];
             Arrays.fill(cache, 0.0);
         }
-
-        @Override
-        public int getInnovation() { return innovation; }
         // TODO: maybe dict-like representation of key-value pairs
         @Override
         public String toString() {
@@ -192,32 +189,14 @@ public class MyController implements Controller<SensingVoxel> {
                             String.valueOf(e.getSource()), String.valueOf(e.getParams()[0]))).toArray(String[]::new)));
         }
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            Neuron neuron = (Neuron) o;
-            return index == neuron.index && innovation == neuron.innovation;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(index, innovation);
-        }
-
     }
 
     public static class ActuatorNeuron extends Neuron {
         @JsonCreator
         public ActuatorNeuron(@JsonProperty("index") int idx,
                               @JsonProperty("x") int coord1,
-                              @JsonProperty("y") int coord2,
-                              int inn) {
-            super(idx, MultiLayerPerceptron.ActivationFunction.TANH, coord1, coord2, inn);
-        }
-
-        public ActuatorNeuron(ActuatorNeuron entry) {
-            super(entry);
+                              @JsonProperty("y") int coord2) {
+            super(idx, MultiLayerPerceptron.ActivationFunction.TANH, coord1, coord2);
         }
 
         @Override
@@ -234,6 +213,9 @@ public class MyController implements Controller<SensingVoxel> {
         public boolean isSensing() { return false; }
 
         @Override
+        public int getInnovation() { return index; }
+
+        @Override
         public String toString() {
             return String.join(",", super.toString(), "ACTUATOR");
         }
@@ -248,15 +230,9 @@ public class MyController implements Controller<SensingVoxel> {
         public SensingNeuron(@JsonProperty("index") int idx,
                              @JsonProperty("x") int coord1,
                              @JsonProperty("y") int coord2,
-                             @JsonProperty("numSensor") int s,
-                             int inn) {
-            super(idx, MultiLayerPerceptron.ActivationFunction.TANH, coord1, coord2, inn);
+                             @JsonProperty("numSensor") int s) {
+            super(idx, MultiLayerPerceptron.ActivationFunction.TANH, coord1, coord2);
             numSensor = s;
-        }
-
-        public SensingNeuron(SensingNeuron other) {
-            super(other);
-            numSensor = other.numSensor;
         }
 
         public int getNumSensor() { return numSensor; }
@@ -275,6 +251,9 @@ public class MyController implements Controller<SensingVoxel> {
         public boolean isActuator() { return false; }
 
         @Override
+        public int getInnovation() { return index; }
+
+        @Override
         public String toString() {
             return String.join(",", super.toString(), "SENSING" + numSensor);
         }
@@ -287,12 +266,8 @@ public class MyController implements Controller<SensingVoxel> {
                             @JsonProperty("function") MultiLayerPerceptron.ActivationFunction a,
                             @JsonProperty("x") int coord1,
                             @JsonProperty("y") int coord2,
-                            int inn) {
-            super(idx, a, coord1, coord2, inn);
-        }
-
-        public HiddenNeuron(HiddenNeuron entry) {
-            super(entry);
+                            int innX, int innY) {
+            super(idx, a, coord1, coord2, innX, innY);
         }
 
         @Override
@@ -320,18 +295,7 @@ public class MyController implements Controller<SensingVoxel> {
     public MyController(@JsonProperty("nodes") Map<Integer, Neuron> n) {
         this.nodes = new HashMap<>();
         for (Neuron entry : n.values()) {
-            if (entry instanceof SensingNeuron) {
-                this.nodes.put(entry.getIndex(), new SensingNeuron((SensingNeuron) entry));
-            }
-            else if (entry instanceof ActuatorNeuron) {
-                this.nodes.put(entry.getIndex(), new ActuatorNeuron((ActuatorNeuron) entry));
-            }
-            else if (entry instanceof HiddenNeuron)  {
-                this.nodes.put(entry.getIndex(), new HiddenNeuron((HiddenNeuron) entry));
-            }
-            else {
-                throw new RuntimeException("Neuron type not supported: " + n.getClass());
-            }
+            this.copyNeuron(entry, true);
         }
     }
 
@@ -345,36 +309,51 @@ public class MyController implements Controller<SensingVoxel> {
 
     public List<Edge> getEdgeSet() { return this.nodes.values().stream().flatMap(n -> n.getIngoingEdges().stream()).collect(Collectors.toList()); }
 
-    public void addEdge(int source, int dest, double weight, double bias, int innovation) {
-        Edge edge = new Edge(weight, bias, source, dest, 0, innovation);
+    public void addEdge(int source, int dest, double weight, double bias) {
+        Edge edge = new Edge(weight, bias, source, dest, 0, this.nodes.get(source).getInnovation(), this.nodes.get(dest).getInnovation());
         this.nodes.get(dest).addIngoingEdge(edge);
     }
 
-    public void addEdge(int source, int dest, double weight, double bias) {
-        this.addEdge(source, dest, weight, bias, 0);
+    public void copyNeuron(Neuron neuron, boolean copyEdges) {
+        int idx = this.nodes.size();
+        Neuron newComer;
+        if (neuron instanceof SensingNeuron) {
+            newComer = new SensingNeuron(idx, neuron.getX(), neuron.getY(), ((SensingNeuron) neuron).getNumSensor());
+        }
+        else if (neuron instanceof ActuatorNeuron) {
+            newComer = new ActuatorNeuron(idx, neuron.getX(), neuron.getY());
+        }
+        else if (neuron instanceof HiddenNeuron)  {
+            newComer = new HiddenNeuron(idx, neuron.getActivation(), neuron.getX(), neuron.getY(), neuron.getFirstInnovation(), neuron.getSecondInnovation());
+        }
+        else {
+            throw new RuntimeException("Neuron type not supported: " + neuron.getClass());
+        }
+        this.nodes.put(idx, newComer);
+        if (copyEdges) {
+            neuron.getIngoingEdges().forEach(e -> newComer.addIngoingEdge(new Edge(e)));
+        }
     }
 
-    public Neuron addHiddenNode(MultiLayerPerceptron.ActivationFunction a, int x, int y, int inn) {
+    public Neuron addHiddenNode(int source, int dest, MultiLayerPerceptron.ActivationFunction a, int x, int y, Supplier<Double> parameterSupplier) {
         int idx = this.nodes.size();
-        Neuron newNode = new HiddenNeuron(idx, a, x, y, inn);
+        Neuron newNode = new HiddenNeuron(idx, a, x, y, this.nodes.get(source).getInnovation(), this.nodes.get(dest).getInnovation());
+        this.nodes.put(idx, newNode);
+        this.addEdge(source, idx, parameterSupplier.get(), parameterSupplier.get());
+        this.addEdge(idx, dest, parameterSupplier.get(), parameterSupplier.get());
+        return newNode;
+    }
+
+    public Neuron addActuatorNode(int x, int y) {
+        int idx = this.nodes.size();
+        Neuron newNode = new ActuatorNeuron(idx, x, y);
         this.nodes.put(idx, newNode);
         return newNode;
     }
 
-    public Neuron addHiddenNode(int x, int y, int inn) {
-        return this.addHiddenNode(MultiLayerPerceptron.ActivationFunction.SIGMOID, x, y, inn);
-    }
-
-    public Neuron addActuatorNode(int x, int y, int inn) {
+    public Neuron addSensingNode(int x, int y, int s) {
         int idx = this.nodes.size();
-        Neuron newNode = new ActuatorNeuron(idx, x, y, inn);
-        this.nodes.put(idx, newNode);
-        return newNode;
-    }
-
-    public Neuron addSensingNode(int x, int y, int s, int inn) {
-        int idx = this.nodes.size();
-        Neuron newNode = new SensingNeuron(this.nodes.size(), x, y, s, inn);
+        Neuron newNode = new SensingNeuron(this.nodes.size(), x, y, s);
         this.nodes.put(idx, newNode);
         return newNode;
     }
@@ -399,7 +378,11 @@ public class MyController implements Controller<SensingVoxel> {
     }
 
     public static double euclideanDistance(Neuron n1, Neuron n2) {
-        return Math.sqrt(Math.pow(n1.getX() - n2.getX(), 2) + Math.pow(n1.getY() - n2.getY(), 2));
+        return euclideanDistance(n1.getX(), n1.getY(), n2.getX(), n2.getY());
+    }
+
+    public static double euclideanDistance(int x1, int y1, int x2, int y2) {
+        return Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
     }
 
     public static int flattenCoord(int x, int y, int width) {
