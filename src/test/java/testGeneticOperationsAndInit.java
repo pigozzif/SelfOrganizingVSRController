@@ -43,7 +43,7 @@ public class testGeneticOperationsAndInit {
     @Test
     public void testAddNodeMutation() {
         MyController controller = getDefaultController();
-        AddNodeMutation mutation = new AddNodeMutation(new WormMorphology(5, 1, "vel-area-touch"), () -> 1.0);
+        AddNodeMutation mutation = new AddNodeMutation(() -> 1.0);
         MyController mutant = mutation.mutate(controller, random);
         Map<Integer, MyController.Neuron> nodes = mutant.getNodeMap();
         assertEquals(26, nodes.size());
@@ -72,7 +72,7 @@ public class testGeneticOperationsAndInit {
         MyController controller = getDefaultController();
         MutateNode mutation = new MutateNode();
         assertNull(mutation.pickNode(controller, random));
-        AddNodeMutation mutationAdd = new AddNodeMutation(new WormMorphology(5, 1, "vel-area-touch"), () -> 1.0);
+        AddNodeMutation mutationAdd = new AddNodeMutation(() -> 1.0);
         MyController mutant = mutationAdd.mutate(controller, random);
         assertNotSame(mutation.pickNode(mutant, random).getActivation(), mutation.pickNode(mutation.mutate(mutant, random), random).getActivation());
     }
@@ -88,7 +88,7 @@ public class testGeneticOperationsAndInit {
         }
     }
 
-    @Test
+    /*@Test
     public void testCrossoverWithInnovationSimple() {
         MyController mother = getIdentityController(1.0);
         MyController father = getIdentityController(2.0);
@@ -119,7 +119,7 @@ public class testGeneticOperationsAndInit {
         MyController father = getIdentityController(2.0);
         CrossoverWithInnovation crossoverWithInnovation = new CrossoverWithInnovation();
         AddEdgeMutation edgeMutation = new AddEdgeMutation(() -> 1.0, 1.0);
-        AddNodeMutation nodeMutation = new AddNodeMutation(new WormMorphology(5, 1, "vel-area-touch"), () -> 1.0);
+        AddNodeMutation nodeMutation = new AddNodeMutation(() -> 1.0);
         for (int i=0; i < 50; ++i) {
             if (i % 2 != 0) {
                 father = edgeMutation.mutate(father, random);
@@ -146,6 +146,39 @@ public class testGeneticOperationsAndInit {
         for (int i=0; i < 25; ++i) {
             assertTrue(newBorn.getNodeMap().containsKey(i));
         }
+    }*/
+
+    @Test
+    public void testCrossoverWithDonationSimple() {
+        MyController mother = getIdentityController(1.0);
+        MyController father = getIdentityController(2.0);
+        CrossoverWithDonation crossover = new CrossoverWithDonation();
+        MyController newBorn = crossover.recombine(mother, father, random);
+        assertEquals(25, newBorn.getNodeSet().size());
+        assertEquals(20, newBorn.getEdgeSet().size());
+        assertEquals(20, newBorn.getNodeSet().stream().filter(MyController.Neuron::isSensing).count());
+        assertEquals(5, newBorn.getNodeSet().stream().filter(MyController.Neuron::isActuator).count());
+    }
+
+    @Test
+    public void testCrossoverWithDonationComplex() {
+        MyController mother = getIdentityController(1.0);
+        MyController father = getIdentityController(2.0);
+        CrossoverWithDonation crossover = new CrossoverWithDonation();
+        AddEdgeMutation edgeMutation = new AddEdgeMutation(() -> 1.0, 1.0);
+        AddNodeMutation nodeMutation = new AddNodeMutation(() -> 1.0);
+        for (int i=0; i < 50; ++i) {
+            if (i % 2 != 0) {
+                father = edgeMutation.mutate(father, random);
+                mother = edgeMutation.mutate(mother, random);
+            }
+            else {
+                father = nodeMutation.mutate(father, random);
+                mother = nodeMutation.mutate(mother, random);
+            }
+        }
+        MyController newBorn = crossover.recombine(mother, father, random);
+        assertEquals(newBorn.breadthFirstSearch(newBorn.getNodeSet().stream().filter(MyController.Neuron::isSensing).collect(Collectors.toSet()), x -> false).size(), newBorn.getNodeSet().size());
     }
 
 }

@@ -9,6 +9,7 @@ import it.units.erallab.hmsrobots.util.Grid;
 import java.io.Serializable;
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -97,7 +98,7 @@ public class MyController implements Controller<SensingVoxel> {
     })
     public abstract static class Neuron implements Serializable {
         @JsonProperty
-        protected List<MyController.Edge> ingoingEdges;
+        protected final List<MyController.Edge> ingoingEdges;
         @JsonProperty
         protected MultiLayerPerceptron.ActivationFunction function;
         protected transient double message;
@@ -124,7 +125,7 @@ public class MyController implements Controller<SensingVoxel> {
 
         public Neuron(Neuron other) {
             this(other.index, other.function, other.x, other.y);
-            ingoingEdges = other.getIngoingEdges().stream().map(MyController.Edge::new).collect(Collectors.toList());
+            other.getIngoingEdges().forEach(e -> ingoingEdges.add(new Edge(e)));
             this.resetState();
         }
         // TODO: call it forward?
@@ -165,6 +166,8 @@ public class MyController implements Controller<SensingVoxel> {
         public List<MyController.Edge> getIngoingEdges() {
            return ingoingEdges;
         }
+
+        public void removeIngoingEdges() { ingoingEdges.clear(); }
 
         public int getX() {
             return x;
@@ -331,7 +334,7 @@ public class MyController implements Controller<SensingVoxel> {
     }
 
     public void copyNeuron(Neuron neuron, boolean copyEdges) {
-        int idx = neuron.getIndex();
+        int idx = this.nodes.size();//neuron.getIndex();
         Neuron newComer;
         if (neuron instanceof SensingNeuron) {
             newComer = new SensingNeuron(idx, neuron.getX(), neuron.getY(), ((SensingNeuron) neuron).getNumSensor());
@@ -347,12 +350,12 @@ public class MyController implements Controller<SensingVoxel> {
         }
         this.nodes.put(idx, newComer);
         if (copyEdges) {
-            neuron.getIngoingEdges().forEach(e -> newComer.addIngoingEdge(new Edge(e)));
+            neuron.getIngoingEdges().forEach(this::copyEdge);
         }
     }
 
     public void addHiddenNode(int source, int dest, MultiLayerPerceptron.ActivationFunction a, int x, int y, Supplier<Double> parameterSupplier) {
-        int idx = computeIndex(this.nodes.get(source).getIndex(), this.nodes.get(dest).getIndex());
+        int idx = this.nodes.size();//computeIndex(this.nodes.get(source).getIndex(), this.nodes.get(dest).getIndex());
         Neuron newNode = new HiddenNeuron(idx, a, x, y);
         this.nodes.put(idx, newNode);
         this.addEdge(source, idx, parameterSupplier.get(), parameterSupplier.get());
@@ -370,24 +373,42 @@ public class MyController implements Controller<SensingVoxel> {
         Neuron newNode = new SensingNeuron(this.nodes.size(), x, y, s);
         this.nodes.put(idx, newNode);
     }
-    // TODO: strong suspect this could be sped up
-    public boolean hasCycles() {
-        for (Neuron s : this.getNodeSet().stream().filter(Neuron::isSensing).collect(Collectors.toList())) {
-            if (this.recursivelyVisit(s, new HashSet<>())) {
-                return true;
-            }
-        }
-        return false;
+
+    public Collection<Edge> getOutgoingEdges(Neuron neuron) {
+        return this.getEdgeSet().stream().filter(e -> e.getSource() == neuron.getIndex()).collect(Collectors.toList());
     }
 
-    private boolean recursivelyVisit(Neuron currentNode, Set<Neuron> visited) {
-        if (visited.contains(currentNode)) {
-            return true;
+    public void removeEdge(Edge edge) {
+        this.getNodeSet().forEach(n -> n.getIngoingEdges().remove(edge));
+    }
+
+    public void removeNeuron(Neuron neuron) {
+        this.nodes.remove(neuron.getIndex());
+    }
+
+    private void recursivelyVisit(Neuron currentNode, Set<Neuron> visited, Predicate<Neuron> stopCondition) {
+        if (visited.contains(currentNode) || stopCondition.test(currentNode)) {
+            return;
         }
         visited.add(currentNode);
-        this.getNodeSet().stream().flatMap(n -> n.getIngoingEdges().stream().filter(e -> e.getSource() == currentNode.getIndex()).map(e -> this.nodes.get(e.getSource())))
-                .forEach(s -> {Set<Neuron> updated = new HashSet<>(visited); updated.add(s); this.recursivelyVisit(s, updated);});
-        return false;
+        this.getOutgoingEdges(currentNode).stream().map(e -> this.nodes.get(e.getTarget()))
+                .forEach(s -> this.recursivelyVisit(s, visited, stopCondition));
+    }
+
+    public Set<Neuron> breadthFirstSearch(Collection<Neuron> frontier, Predicate<Neuron> stopCondition) {
+        Set<Neuron> visited = new HashSet<>();
+        for (Neuron n : frontier) {
+            this.recursivelyVisit(n, visited, stopCondition);
+        }
+        return visited;
+    }
+
+    public int[] getValidXCoordinates() {
+        return this.getNodeSet().stream().mapToInt(Neuron::getX).distinct().toArray();
+    }
+
+    public int[] getValidYCoordinates() {
+        return this.getNodeSet().stream().mapToInt(Neuron::getY).distinct().toArray();
     }
 
     public static double euclideanDistance(Neuron n1, Neuron n2) {

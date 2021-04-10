@@ -13,6 +13,7 @@ import org.junit.Test;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
 
@@ -43,7 +44,7 @@ public class testIntegrationAndCompute {
         double episodeTime = 30.0;
         Settings physicsSettings = new Settings();
         MyController controller = getDefaultController();
-        controller = (new AddNodeMutation(new WormMorphology(5, 1, "vel-area-touch"), () -> 1.0)).mutate(controller, random);
+        controller = (new AddNodeMutation(() -> 1.0)).mutate(controller, random);
         controller = (new AddEdgeMutation(() -> 1.0, 1.0)).mutate(controller, random);
         controller = (new MutateNode()).mutate(controller, random);
         controller = (new MutateEdge(0.1, 0.0)).mutate(controller, random);
@@ -57,11 +58,11 @@ public class testIntegrationAndCompute {
         double episodeTime = 30.0;
         Settings physicsSettings = new Settings();
         MyController controller = getDefaultController();
-        controller = (new AddNodeMutation(new WormMorphology(5, 1, "vel-area-touch"), () -> 1.0)).mutate(controller, random);
+        controller = (new AddNodeMutation(() -> 1.0)).mutate(controller, random);
         controller = (new AddEdgeMutation(() -> 1.0, 1.0)).mutate(controller, random);
         controller = (new MutateNode()).mutate(controller, random);
         controller = (new MutateEdge(0.1, 0.0)).mutate(controller, random);
-        controller = (new CrossoverWithInnovation().recombine(controller, getIdentityController(), random));
+        controller = (new CrossoverWithDonation().recombine(controller, getIdentityController(), random));
         Robot<?> testRobot = new Robot<>(controller, (new WormMorphology(5, 5, "vel-area-touch")).getBody());
         Function<Robot<?>, Outcome> trainingTask = new Locomotion(episodeTime, Locomotion.createTerrain("flat"), physicsSettings);
         trainingTask.apply(testRobot);
@@ -84,6 +85,24 @@ public class testIntegrationAndCompute {
         value = Math.tanh(value + 1.0);
         nodes.forEach(MyController.Neuron::advance);
         assertArrayEquals(new double[] {value, value, value, value, value}, nodes.stream().filter(MyController.Neuron::isActuator).mapToDouble(n -> n.send(0)).toArray(), 0.00001);
+    }
+
+    @Test
+    public void testBFS() {
+        MyController controller = getIdentityController();
+        AddNodeMutation nodeMutation = new AddNodeMutation(() -> 1.0);
+        for (int i=0; i < 50; ++i) {
+            controller = nodeMutation.mutate(controller, random);
+        }
+        Set<MyController.Neuron> startSet = controller.breadthFirstSearch(controller.getNodeSet().stream().filter(MyController.Neuron::isSensing).collect(Collectors.toSet()), x -> false);
+        assertEquals(60, startSet.size());
+    }
+
+    @Test
+    public void testValidCoordinates() {
+        MyController controller = getIdentityController();
+        assertArrayEquals(new int[] {0, 1, 2, 3, 4}, controller.getValidXCoordinates());
+        assertArrayEquals(new int[] {0}, controller.getValidYCoordinates());
     }
 
 }

@@ -3,7 +3,6 @@ package geneticOps;
 import buildingBlocks.MyController;
 import it.units.erallab.hmsrobots.core.controllers.MultiLayerPerceptron;
 import it.units.malelab.jgea.core.operator.Mutation;
-import morphologies.Morphology;
 import org.apache.commons.math3.util.Pair;
 
 import java.util.*;
@@ -13,24 +12,23 @@ import java.util.stream.Collectors;
 
 public class AddNodeMutation implements Mutation<MyController> {
 
-    private final Morphology morphology;
     private final Supplier<Double> parameterSupplier;
 
-    public AddNodeMutation(Morphology morph, Supplier<Double> sup) {
-        morphology = morph;
+    public AddNodeMutation(Supplier<Double> sup) {
         parameterSupplier = sup;
     }
 
     @Override
     public MyController mutate(MyController parent, Random random) {
-        Morphology.Pair sample = morphology.getAllowedMorph().get(random.nextInt(morphology.getAllowedMorph().size()));
+        int sampleX = parent.getValidXCoordinates()[random.nextInt(parent.getValidXCoordinates().length)];
+        int sampleY = parent.getValidYCoordinates()[random.nextInt(parent.getValidYCoordinates().length)];
         //MultiLayerPerceptron.ActivationFunction a = MultiLayerPerceptron.ActivationFunction.values()[random.nextInt(MultiLayerPerceptron.ActivationFunction.values().length)];
         MyController newBorn = new MyController(parent);
-        Map<Integer, MyController.Neuron> candidates = newBorn.getNodeMap().entrySet().stream().filter(n -> MyController.euclideanDistance(sample.first, sample.second, n.getValue().getX(), n.getValue().getY()) <= 1.0)
+        Map<Integer, MyController.Neuron> candidates = newBorn.getNodeMap().entrySet().stream().filter(n -> MyController.euclideanDistance(sampleX, sampleY, n.getValue().getX(), n.getValue().getY()) <= 1.0)
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         Pair<MyController.Neuron, MyController.Neuron> trial = this.pickPair(candidates, random);
         // TODO: is it really necessary to avoid actuators as sources and sensors as targets?
-        newBorn.addHiddenNode(trial.getFirst().getIndex(), trial.getSecond().getIndex(), MultiLayerPerceptron.ActivationFunction.SIGMOID, sample.first, sample.second, this.parameterSupplier);
+        newBorn.addHiddenNode(trial.getFirst().getIndex(), trial.getSecond().getIndex(), MultiLayerPerceptron.ActivationFunction.SIGMOID, sampleX, sampleY, this.parameterSupplier);
         return newBorn;
     }
 
