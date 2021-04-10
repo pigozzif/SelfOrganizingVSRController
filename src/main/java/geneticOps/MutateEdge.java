@@ -15,7 +15,7 @@ public class MutateEdge implements Mutation<MyController> {
 
     private final GaussianMutation mutation;
     private final double perc;
-    private final int[] delayPicks = IntStream.rangeClosed(0, MyController.Edge.MAX_DELAY).toArray();
+    //private final int[] delayPicks = IntStream.rangeClosed(0, MyController.Edge.MAX_DELAY).toArray();
 
     public MutateEdge(double sigma, double p) {
         this.mutation = new GaussianMutation(sigma);
@@ -45,9 +45,16 @@ public class MutateEdge implements Mutation<MyController> {
         List<MyController.Edge> edges = controller.getEdgeSet();
         MyController.Edge candidate = edges.get(random.nextInt(edges.size()));
         int d;
-        do {
-            d = this.delayPicks[random.nextInt(this.delayPicks.length)];
-        } while (d == candidate.getDelay());
+        int oldD = candidate.getDelay();
+        if (oldD == 0) {
+            d = 1;
+        }
+        else if (oldD == 9) {
+            d = 8;
+        }
+        else {
+            d = (random.nextBoolean()) ? oldD + 1 : oldD - 1;
+        }
         candidate.perturbDelay(d);
     }
 

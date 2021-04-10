@@ -2,11 +2,10 @@ package geneticOps;
 
 import buildingBlocks.MyController;
 import it.units.malelab.jgea.core.operator.Mutation;
+import org.apache.commons.math3.util.Pair;
 
 import java.util.*;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 
 public class AddEdgeMutation implements Mutation<MyController> {
@@ -30,16 +29,28 @@ public class AddEdgeMutation implements Mutation<MyController> {
         }
         return newBorn;
     }
-
+    // TODO: we now outlaw multiedges, but this couls make sense with delay
     private void addMutation(MyController controller, Random random) {
         Map<Integer, MyController.Neuron> nodes = controller.getNodeMap();
-        List<Integer> indexes = IntStream.range(0, nodes.size()).boxed().collect(Collectors.toList());
+        List<Integer> indexes = new ArrayList<>(nodes.keySet());
         Collections.shuffle(indexes, random);
+        Pair<Integer, Integer> candidates = this.pickPair(nodes, random);
         // TODO: for the moment, we don't allow outgoing edges from actuators
-        MyController.Neuron source = nodes.get(indexes.stream().filter(i -> !nodes.get(i).isActuator()).findFirst().get());
-        int target = nodes.get(indexes.stream().filter(i -> nodes.get(i).getIndex() != source.getIndex() &&
-                MyController.euclideanDistance(source, nodes.get(i)) <= 1.0 && !nodes.get(i).isSensing()).findFirst().get()).getIndex();
-        controller.addEdge(source.getIndex(), target, this.parameterSupplier.get(), this.parameterSupplier.get());
+        controller.addEdge(candidates.getFirst(), candidates.getSecond(), this.parameterSupplier.get(), this.parameterSupplier.get());
+    }
+
+    private Pair<Integer, Integer> pickPair(Map<Integer, MyController.Neuron> nodes, Random random) {
+        Optional<Integer> candidate;
+        MyController.Neuron source;
+        do {
+            List<Integer> indexes = new ArrayList<>(nodes.keySet());
+            Collections.shuffle(indexes, random);
+            source = nodes.get(indexes.stream().filter(i -> !nodes.get(i).isActuator()).findFirst().get());
+            MyController.Neuron finalSource = source;
+            candidate = indexes.stream().filter(i -> nodes.get(i).getIndex() != finalSource.getIndex() &&
+                    MyController.euclideanDistance(finalSource, nodes.get(i)) <= 1.0 && !nodes.get(i).isSensing() && !nodes.get(i).hasInNeighbour(finalSource)).findFirst();
+        } while (candidate.isEmpty());
+        return new Pair<>(source.getIndex(), candidate.get());
     }
     // TODO: might be the source of incorrect results for tests, still to verify
     private void enableAndDisableMutation(MyController controller, Random random) {

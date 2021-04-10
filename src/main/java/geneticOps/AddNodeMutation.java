@@ -4,13 +4,11 @@ import buildingBlocks.MyController;
 import it.units.erallab.hmsrobots.core.controllers.MultiLayerPerceptron;
 import it.units.malelab.jgea.core.operator.Mutation;
 import morphologies.Morphology;
+import org.apache.commons.math3.util.Pair;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 
 public class AddNodeMutation implements Mutation<MyController> {
@@ -28,15 +26,20 @@ public class AddNodeMutation implements Mutation<MyController> {
         Morphology.Pair sample = morphology.getAllowedMorph().get(random.nextInt(morphology.getAllowedMorph().size()));
         //MultiLayerPerceptron.ActivationFunction a = MultiLayerPerceptron.ActivationFunction.values()[random.nextInt(MultiLayerPerceptron.ActivationFunction.values().length)];
         MyController newBorn = new MyController(parent);
-        List<MyController.Neuron> candidates = newBorn.getNodeSet().stream().filter(n -> MyController.euclideanDistance(sample.first, sample.second, n.getX(), n.getY()) <= 1.0)
-                .collect(Collectors.toList());
-        List<Integer> indexes = IntStream.range(0, candidates.size()).boxed().collect(Collectors.toList());
-        Collections.shuffle(indexes, random);
-        int source = candidates.get(indexes.stream().filter(i -> !candidates.get(i).isActuator()).findFirst().get()).getIndex();
-        int dest = candidates.get(indexes.stream().filter(i -> !candidates.get(i).isSensing()).findFirst().get()).getIndex();
+        Map<Integer, MyController.Neuron> candidates = newBorn.getNodeMap().entrySet().stream().filter(n -> MyController.euclideanDistance(sample.first, sample.second, n.getValue().getX(), n.getValue().getY()) <= 1.0)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        Pair<MyController.Neuron, MyController.Neuron> trial = this.pickPair(candidates, random);
         // TODO: is it really necessary to avoid actuators as sources and sensors as targets?
-        newBorn.addHiddenNode(source, dest, MultiLayerPerceptron.ActivationFunction.SIGMOID, sample.first, sample.second, this.parameterSupplier);
+        newBorn.addHiddenNode(trial.getFirst().getIndex(), trial.getSecond().getIndex(), MultiLayerPerceptron.ActivationFunction.SIGMOID, sample.first, sample.second, this.parameterSupplier);
         return newBorn;
+    }
+
+    private Pair<MyController.Neuron, MyController.Neuron> pickPair(Map<Integer, MyController.Neuron> candidates, Random random) {
+        List<Integer> indexes = new ArrayList<>(candidates.keySet());
+        Collections.shuffle(indexes, random);
+        MyController.Neuron source = candidates.get(indexes.stream().filter(i -> !candidates.get(i).isActuator()).findFirst().get());
+        MyController.Neuron dest = candidates.get(indexes.stream().filter(i -> !candidates.get(i).isSensing()).findFirst().get());
+        return new Pair<>(source, dest);
     }
 
 }

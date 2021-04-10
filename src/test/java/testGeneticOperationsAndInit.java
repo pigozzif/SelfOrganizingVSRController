@@ -89,18 +89,24 @@ public class testGeneticOperationsAndInit {
     }
 
     @Test
-    public void testCrossoverWithInoovationSimple() {
+    public void testCrossoverWithInnovationSimple() {
         MyController mother = getIdentityController(1.0);
         MyController father = getIdentityController(2.0);
         CrossoverWithInnovation crossoverWithInnovation = new CrossoverWithInnovation();
         MyController newBorn = crossoverWithInnovation.recombine(mother, father, random);
         assertEquals(25, newBorn.getNodeSet().size());
         assertEquals(20, newBorn.getEdgeSet().size());
+        List<Integer> nodeInnovations = new ArrayList<>();
+        nodeInnovations.addAll(mother.getNodeSet().stream().map(MyController.Neuron::getIndex).collect(Collectors.toList()));
+        nodeInnovations.addAll(father.getNodeSet().stream().map(MyController.Neuron::getIndex).collect(Collectors.toList()));
         for (MyController.Neuron n : newBorn.getNodeSet()) {
-            assertEquals(0, n.getInnovation());
+            assertTrue(nodeInnovations.contains(n.getIndex()));
         }
+        List<Integer> edgeInnovations = new ArrayList<>();
+        edgeInnovations.addAll(mother.getEdgeSet().stream().map(MyController.Edge::getIndex).collect(Collectors.toList()));
+        edgeInnovations.addAll(father.getEdgeSet().stream().map(MyController.Edge::getIndex).collect(Collectors.toList()));
         for (MyController.Edge e : newBorn.getEdgeSet()) {
-            assertEquals(0, e.getInnovation());
+            assertTrue(edgeInnovations.contains(e.getIndex()));
         }
         for (int i=0; i < 25; ++i) {
             assertTrue(newBorn.getNodeMap().containsKey(i));
@@ -125,15 +131,20 @@ public class testGeneticOperationsAndInit {
             }
         }
         MyController newBorn = crossoverWithInnovation.recombine(mother, father, random);
-        assertEquals(75, newBorn.getNodeSet().size());
-        assertEquals(170, newBorn.getEdgeSet().size());
-        List<Integer> innovations = newBorn.getNodeSet().stream().map(MyController.Neuron::getInnovation).collect(Collectors.toList());
-        for (int i=0; i <= 100; ++i) {
-            assertTrue(innovations.contains(i));
+        List<Integer> nodeInnovations = new ArrayList<>();
+        nodeInnovations.addAll(mother.getNodeSet().stream().map(MyController.Neuron::getIndex).collect(Collectors.toList()));
+        nodeInnovations.addAll(father.getNodeSet().stream().map(MyController.Neuron::getIndex).collect(Collectors.toList()));
+        for (MyController.Neuron n : newBorn.getNodeSet()) {
+            assertTrue(nodeInnovations.contains(n.getIndex()));
         }
-        List<Integer> indexes = newBorn.getNodeSet().stream().map(MyController.Neuron::getIndex).collect(Collectors.toList());
-        for (int i=0; i <= 100; ++i) {
-            assertTrue(indexes.contains(i));
+        List<Integer> edgeInnovations = new ArrayList<>();
+        edgeInnovations.addAll(mother.getEdgeSet().stream().map(MyController.Edge::getIndex).collect(Collectors.toList()));
+        edgeInnovations.addAll(father.getEdgeSet().stream().map(MyController.Edge::getIndex).collect(Collectors.toList()));
+        for (MyController.Edge e : newBorn.getEdgeSet()) {
+            assertTrue(edgeInnovations.contains(e.getIndex()));
+        }
+        for (int i=0; i < 25; ++i) {
+            assertTrue(newBorn.getNodeMap().containsKey(i));
         }
     }
 
