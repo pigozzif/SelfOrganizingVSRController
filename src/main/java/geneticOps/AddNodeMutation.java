@@ -20,10 +20,14 @@ public class AddNodeMutation implements Mutation<MyController> {
 
     @Override
     public MyController mutate(MyController parent, Random random) {
-        int sampleX = parent.getValidXCoordinates()[random.nextInt(parent.getValidXCoordinates().length)];
-        int sampleY = parent.getValidYCoordinates()[random.nextInt(parent.getValidYCoordinates().length)];
+        Pair<Integer, Integer> pair = parent.getValidCoordinates()[random.nextInt(parent.getValidCoordinates().length)];
+        int sampleX = pair.getFirst();//parent.getValidXCoordinates()[random.nextInt(parent.getValidXCoordinates().length)];
+        int sampleY = pair.getSecond();//parent.getValidYCoordinates()[random.nextInt(parent.getValidYCoordinates().length)];
         //MultiLayerPerceptron.ActivationFunction a = MultiLayerPerceptron.ActivationFunction.values()[random.nextInt(MultiLayerPerceptron.ActivationFunction.values().length)];
         MyController newBorn = new MyController(parent);
+        //List<MyController.Edge> edges = newBorn.getEdgeSet();
+        //MyController.Edge edge = edges.get(random.nextInt(edges.size()));
+        //newBorn.splitEdge(edge, this.parameterSupplier, random);
         Map<Integer, MyController.Neuron> candidates = newBorn.getNodeMap().entrySet().stream().filter(n -> MyController.euclideanDistance(sampleX, sampleY, n.getValue().getX(), n.getValue().getY()) <= 1.0)
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         Pair<MyController.Neuron, MyController.Neuron> trial = this.pickPair(candidates, random);

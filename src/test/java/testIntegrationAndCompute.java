@@ -8,6 +8,7 @@ import morphologies.WormMorphology;
 import it.units.erallab.hmsrobots.core.objects.Robot;
 import it.units.erallab.hmsrobots.tasks.locomotion.Locomotion;
 import it.units.erallab.hmsrobots.tasks.locomotion.Outcome;
+import org.apache.commons.math3.util.Pair;
 import org.dyn4j.dynamics.Settings;
 import org.junit.Test;
 
@@ -96,13 +97,6 @@ public class testIntegrationAndCompute {
         }
         Set<MyController.Neuron> startSet = controller.breadthFirstSearch(controller.getNodeSet().stream().filter(MyController.Neuron::isSensing).collect(Collectors.toSet()), x -> false);
         assertEquals(60, startSet.size());
-    }
-
-    @Test
-    public void testValidCoordinates() {
-        MyController controller = getIdentityController();
-        assertArrayEquals(new int[] {0, 1, 2, 3, 4}, controller.getValidXCoordinates());
-        assertArrayEquals(new int[] {0}, controller.getValidYCoordinates());
     }
 
 }

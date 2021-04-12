@@ -5,6 +5,7 @@ import it.units.erallab.hmsrobots.core.controllers.Controller;
 import it.units.erallab.hmsrobots.core.controllers.MultiLayerPerceptron;
 import it.units.erallab.hmsrobots.core.objects.SensingVoxel;
 import it.units.erallab.hmsrobots.util.Grid;
+import org.apache.commons.math3.util.Pair;
 
 import java.io.Serializable;
 import java.util.*;
@@ -333,16 +334,19 @@ public class MyController implements Controller<SensingVoxel> {
         this.addEdge(other.getSource(), other.getTarget(), other.getParams()[0], other.getParams()[1]);
     }
 
-    public void copyNeuron(Neuron neuron, boolean copyEdges) {
-        int idx = this.nodes.size();//neuron.getIndex();
+    public int copyNeuron(Neuron neuron, boolean copyEdges) {
+        int idx;// = /*this.nodes.size();*/neuron.getIndex();
         Neuron newComer;
         if (neuron instanceof SensingNeuron) {
+            idx = neuron.getIndex();
             newComer = new SensingNeuron(idx, neuron.getX(), neuron.getY(), ((SensingNeuron) neuron).getNumSensor());
         }
         else if (neuron instanceof ActuatorNeuron) {
+            idx = neuron.getIndex();
             newComer = new ActuatorNeuron(idx, neuron.getX(), neuron.getY());
         }
         else if (neuron instanceof HiddenNeuron)  {
+            idx = /*this.nodes.size()*/neuron.getIndex();
             newComer = new HiddenNeuron(idx, neuron.getActivation(), neuron.getX(), neuron.getY());
         }
         else {
@@ -352,14 +356,38 @@ public class MyController implements Controller<SensingVoxel> {
         if (copyEdges) {
             neuron.getIngoingEdges().forEach(this::copyEdge);
         }
+        return idx;
     }
 
     public void addHiddenNode(int source, int dest, MultiLayerPerceptron.ActivationFunction a, int x, int y, Supplier<Double> parameterSupplier) {
-        int idx = this.nodes.size();//computeIndex(this.nodes.get(source).getIndex(), this.nodes.get(dest).getIndex());
+        int idx = this.nodes.size();/*computeIndex(this.nodes.get(source).getIndex(), this.nodes.get(dest).getIndex());*/
         Neuron newNode = new HiddenNeuron(idx, a, x, y);
         this.nodes.put(idx, newNode);
         this.addEdge(source, idx, parameterSupplier.get(), parameterSupplier.get());
         this.addEdge(idx, dest, parameterSupplier.get(), parameterSupplier.get());
+    }
+
+    public void splitEdge(Edge edge, Supplier<Double> parameterSupplier, Random random) {
+        int source = edge.getSource();
+        int target = edge.getTarget();
+        int x, y;
+        if (euclideanDistance(this.nodes.get(source), this.nodes.get(target)) == 0.0) {
+            x = this.nodes.get(source).getX();
+            y = this.nodes.get(source).getY();
+        }
+        else {
+            boolean toss = random.nextBoolean();
+            if (toss) {
+                x = this.nodes.get(source).getX();
+                y = this.nodes.get(source).getY();
+            }
+            else {
+                x = this.nodes.get(target).getX();
+                y = this.nodes.get(target).getY();
+            }
+        }
+        this.addHiddenNode(source, target, MultiLayerPerceptron.ActivationFunction.SIGMOID, x, y, parameterSupplier);
+        this.removeEdge(edge);
     }
 
     public void addActuatorNode(int x, int y) {
@@ -374,41 +402,49 @@ public class MyController implements Controller<SensingVoxel> {
         this.nodes.put(idx, newNode);
     }
 
-    public Collection<Edge> getOutgoingEdges(Neuron neuron) {
-        return this.getEdgeSet().stream().filter(e -> e.getSource() == neuron.getIndex()).collect(Collectors.toList());
+    public Map<Integer, List<Edge>> getOutgoingEdges() {
+        Map<Integer, List<Edge>> out = new HashMap<>();
+        for (Edge edge : this.getEdgeSet()) {
+            if (out.containsKey(edge.getSource())) {
+                out.get(edge.getSource()).add(edge);
+            }
+            else {
+                out.put(edge.getSource(), new ArrayList<>() {{ add(edge); }});
+            }
+        }
+        return out;
     }
 
     public void removeEdge(Edge edge) {
-        this.getNodeSet().forEach(n -> n.getIngoingEdges().remove(edge));
+        this.nodes.get(edge.getTarget()).getIngoingEdges().remove(edge);
     }
 
     public void removeNeuron(Neuron neuron) {
         this.nodes.remove(neuron.getIndex());
     }
-
-    private void recursivelyVisit(Neuron currentNode, Set<Neuron> visited, Predicate<Neuron> stopCondition) {
+    // TODO: not efficient, to be used only for testing
+    private void recursivelyVisit(Neuron currentNode, Set<Neuron> visited, Predicate<Neuron> stopCondition,
+                                  Map<Integer, List<Edge>> edges) {
         if (visited.contains(currentNode) || stopCondition.test(currentNode)) {
             return;
         }
         visited.add(currentNode);
-        this.getOutgoingEdges(currentNode).stream().map(e -> this.nodes.get(e.getTarget()))
-                .forEach(s -> this.recursivelyVisit(s, visited, stopCondition));
+        if (edges.containsKey(currentNode.getIndex())) {
+            this.getOutgoingEdges().get(currentNode.getIndex()).stream().map(e -> this.nodes.get(e.getTarget()))
+                    .forEach(s -> this.recursivelyVisit(s, visited, stopCondition, edges));
+        }
     }
 
     public Set<Neuron> breadthFirstSearch(Collection<Neuron> frontier, Predicate<Neuron> stopCondition) {
         Set<Neuron> visited = new HashSet<>();
         for (Neuron n : frontier) {
-            this.recursivelyVisit(n, visited, stopCondition);
+            this.recursivelyVisit(n, visited, stopCondition, this.getOutgoingEdges());
         }
         return visited;
     }
 
-    public int[] getValidXCoordinates() {
-        return this.getNodeSet().stream().mapToInt(Neuron::getX).distinct().toArray();
-    }
-
-    public int[] getValidYCoordinates() {
-        return this.getNodeSet().stream().mapToInt(Neuron::getY).distinct().toArray();
+    public Pair[] getValidCoordinates() {
+        return this.getNodeSet().stream().map(n -> new Pair<>(n.getX(), n.getY())).distinct().toArray(Pair[]::new);
     }
 
     public static double euclideanDistance(Neuron n1, Neuron n2) {

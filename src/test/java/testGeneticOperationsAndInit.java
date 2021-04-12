@@ -88,7 +88,7 @@ public class testGeneticOperationsAndInit {
         }
     }
 
-    /*@Test
+    @Test
     public void testCrossoverWithInnovationSimple() {
         MyController mother = getIdentityController(1.0);
         MyController father = getIdentityController(2.0);
@@ -146,7 +146,7 @@ public class testGeneticOperationsAndInit {
         for (int i=0; i < 25; ++i) {
             assertTrue(newBorn.getNodeMap().containsKey(i));
         }
-    }*/
+    }
 
     @Test
     public void testCrossoverWithDonationSimple() {
