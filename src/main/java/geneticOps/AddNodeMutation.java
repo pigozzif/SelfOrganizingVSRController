@@ -21,8 +21,8 @@ public class AddNodeMutation implements Mutation<MyController> {
     @Override
     public MyController mutate(MyController parent, Random random) {
         Pair<Integer, Integer> pair = parent.getValidCoordinates()[random.nextInt(parent.getValidCoordinates().length)];
-        int sampleX = pair.getFirst();//parent.getValidXCoordinates()[random.nextInt(parent.getValidXCoordinates().length)];
-        int sampleY = pair.getSecond();//parent.getValidYCoordinates()[random.nextInt(parent.getValidYCoordinates().length)];
+        int sampleX = pair.getFirst();
+        int sampleY = pair.getSecond();
         //MultiLayerPerceptron.ActivationFunction a = MultiLayerPerceptron.ActivationFunction.values()[random.nextInt(MultiLayerPerceptron.ActivationFunction.values().length)];
         MyController newBorn = new MyController(parent);
         //List<MyController.Edge> edges = newBorn.getEdgeSet();

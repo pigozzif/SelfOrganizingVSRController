@@ -360,7 +360,7 @@ public class MyController implements Controller<SensingVoxel> {
     }
 
     public void addHiddenNode(int source, int dest, MultiLayerPerceptron.ActivationFunction a, int x, int y, Supplier<Double> parameterSupplier) {
-        int idx = this.nodes.size();/*computeIndex(this.nodes.get(source).getIndex(), this.nodes.get(dest).getIndex());*/
+        int idx = this.nodes.size();//computeIndex(this.nodes.get(source).getIndex(), this.nodes.get(dest).getIndex());
         Neuron newNode = new HiddenNeuron(idx, a, x, y);
         this.nodes.put(idx, newNode);
         this.addEdge(source, idx, parameterSupplier.get(), parameterSupplier.get());
@@ -371,20 +371,13 @@ public class MyController implements Controller<SensingVoxel> {
         int source = edge.getSource();
         int target = edge.getTarget();
         int x, y;
-        if (euclideanDistance(this.nodes.get(source), this.nodes.get(target)) == 0.0) {
+        if (random.nextBoolean()) {
             x = this.nodes.get(source).getX();
             y = this.nodes.get(source).getY();
         }
         else {
-            boolean toss = random.nextBoolean();
-            if (toss) {
-                x = this.nodes.get(source).getX();
-                y = this.nodes.get(source).getY();
-            }
-            else {
-                x = this.nodes.get(target).getX();
-                y = this.nodes.get(target).getY();
-            }
+            x = this.nodes.get(target).getX();
+            y = this.nodes.get(target).getY();
         }
         this.addHiddenNode(source, target, MultiLayerPerceptron.ActivationFunction.SIGMOID, x, y, parameterSupplier);
         this.removeEdge(edge);

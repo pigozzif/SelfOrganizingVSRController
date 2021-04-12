@@ -13,28 +13,35 @@ import java.util.stream.Collectors;
 // TODO: for the moment not so nice
 public class CrossoverWithDonation implements Crossover<MyController> {
 
+    private final Set<MyController.Neuron> visitedNeurons;
+    private final Set<MyController.Edge> visitedEdges;
+
+    public CrossoverWithDonation() {
+        this.visitedNeurons = new HashSet<>();
+        this.visitedEdges = new HashSet<>();
+    }
+
     @Override
     public MyController recombine(MyController parent1, MyController parent2, Random random) {
-        MyController newBorn = new MyController(Collections.emptyMap());
         Pair<Integer, Integer> pair = parent1.getValidCoordinates()[random.nextInt(parent1.getValidCoordinates().length)];
-        int sampleX = pair.getFirst();//parent1.getValidXCoordinates()[random.nextInt(parent1.getValidXCoordinates().length)];
-        int sampleY = pair.getSecond();//parent1.getValidYCoordinates()[random.nextInt(parent1.getValidYCoordinates().length)];
-        /*try {
-            plotBrain(parent1, "parent1");
-            plotBrain(parent2, "parent2");
-        }
-        catch (Exception e) {
-            System.exit(1);
-        }*/
-        Map<Integer, Integer> sharedTerminals = this.visitAndCopyFromDonator(newBorn, parent2, parent2.getNodeSet().stream().filter(n -> n.isSensing() && n.getX() == sampleX && n.getY() == sampleY).collect(Collectors.toSet()));
+        int sampleX = pair.getFirst();
+        int sampleY = pair.getSecond();
+        //try {
+        //    plotBrain(parent1, "parent1");
+        //    plotBrain(parent2, "parent2");
+        //}
+        //catch (Exception e) {
+        //    System.exit(1);
+        //}
+        //this.visitAndCopyFromPatient(newBorn, newBorn.getNodeSet().stream().filter(n -> n.getX() == sampleX && n.getY() == sampleY && n.isSensing()).collect(Collectors.toSet()));
         //int numFromDonator = newBorn.getNodeSet().size();
-        /*try {
-            plotBrain(newBorn, "child_intermediate");
-        }
-        catch (Exception e) {
-            System.exit(1);
-        }*/
-        this.visitAndCopyFromPatient(newBorn, parent1, parent1.getNodeSet().stream().filter(n -> (n.getX() != sampleX || n.getY() != sampleY) && n.isSensing()).collect(Collectors.toSet()), sharedTerminals);
+        //try {
+        //    plotBrain(newBorn, "child_intermediate");
+        //}
+        //catch (Exception e) {
+        //    System.exit(1);
+        //}
+        //this.visitAndCopyFromDonator(newBorn, parent2, parent2.getNodeSet().stream().filter(n -> n.isSensing() && n.getX() == sampleX && n.getY() == sampleY).collect(Collectors.toSet()));//, sharedTerminals);
         //System.out.println("Operated on (" + sampleX + "," + sampleY + "), with " + numFromDonator + " from donator and " + (newBorn.getNodeSet().size() - numFromDonator) + " from the other one");
         /*try {
             plotBrain(newBorn, "child_final");
@@ -43,14 +50,56 @@ public class CrossoverWithDonation implements Crossover<MyController> {
             System.exit(1);
         }*/
 
+        return this.amputateVoxel(parent1, parent2, sampleX, sampleY);
+    }
+
+    public MyController amputateVoxel(MyController parent1, MyController parent2, int x, int y) {
+        MyController newBorn = new MyController(parent1);
+        this.visit(parent1, parent1.getNodeSet().stream().filter(n -> n.isSensing() && n.getX() == x && n.getY() == y).collect(Collectors.toSet()));
+        this.fillNewBorn(newBorn, false);
+        this.visit(parent2, parent2.getNodeSet().stream().filter(n -> n.getX() == x && n.getY() == y && n.isSensing()).collect(Collectors.toSet()));
+        this.fillNewBorn(newBorn, true);
         return newBorn;
     }
 
-    private Map<Integer, Integer> visitAndCopyFromDonator(MyController child, MyController parent, Set<MyController.Neuron> frontier) {
-        Map<MyController.Neuron, Integer> visited = new HashMap<>();
-        Map<Integer, Integer> terminals = new HashMap<>();
+    private void fillNewBorn(MyController child, boolean isDonating) {
+        if (isDonating) {
+            this.visitedNeurons.forEach(n -> child.copyNeuron(n, false));
+            this.visitedEdges.forEach(child::copyEdge);
+        }
+        else {
+            this.visitedEdges.forEach(child::removeEdge);
+            this.visitedNeurons.forEach(child::removeNeuron);
+        }
+        this.visitedNeurons.clear();
+        this.visitedEdges.clear();
+    }
+
+    private void visit(MyController parent, Set<MyController.Neuron> frontier) {
         Map<Integer, List<MyController.Edge>> outgoingEdges = parent.getOutgoingEdges();
-        Queue<MyController.Edge> edgeQueue = frontier.stream().flatMap(n -> outgoingEdges.get(n.getIndex()).stream()).collect(Collectors.toCollection(LinkedList::new));
+        Queue<MyController.Edge> edgeQueue = frontier.stream().flatMap(n -> outgoingEdges.getOrDefault(n.getIndex(), new ArrayList<>()).stream()).collect(Collectors.toCollection(LinkedList::new));
+        MyController.Neuron source, target;
+        MyController.Edge edge;
+        while (!edgeQueue.isEmpty()) {
+            edge = edgeQueue.remove();
+            source = parent.getNodeMap().get(edge.getSource());
+            target = parent.getNodeMap().get(edge.getTarget());
+            if (!this.visitedNeurons.contains(source)) {
+                this.visitedNeurons.add(source);
+                edgeQueue.addAll(source.getIngoingEdges());
+            }
+            if (!this.visitedNeurons.contains(target)) {
+                this.visitedNeurons.add(target);
+                edgeQueue.addAll(outgoingEdges.getOrDefault(target.getIndex(), Collections.emptyList()));
+            }
+            this.visitedEdges.add(edge);
+        }
+    }
+
+    private void visitAndCopyFromDonator(MyController child, MyController parent, Set<MyController.Neuron> frontier) {
+        Map<MyController.Neuron, Integer> visited = new HashMap<>();
+        Map<Integer, List<MyController.Edge>> outgoingEdges = parent.getOutgoingEdges();
+        Queue<MyController.Edge> edgeQueue = frontier.stream().flatMap(n -> outgoingEdges.getOrDefault(n.getIndex(), new ArrayList<>()).stream()).collect(Collectors.toCollection(LinkedList::new));
         int sourceIdx;
         int targetIdx;
         MyController.Neuron source, target;
@@ -63,9 +112,6 @@ public class CrossoverWithDonation implements Crossover<MyController> {
                 sourceIdx = child.copyNeuron(source, false);
                 visited.put(source, sourceIdx);
                 edgeQueue.addAll(source.getIngoingEdges());
-                if (source.isActuator() || source.isSensing()) {
-                    terminals.put(source.getIndex(), sourceIdx);
-                }
             }
             else {
                 sourceIdx = visited.get(source);
@@ -76,23 +122,18 @@ public class CrossoverWithDonation implements Crossover<MyController> {
                 if (outgoingEdges.containsKey(target.getIndex())) {
                     edgeQueue.addAll(outgoingEdges.get(target.getIndex()));
                 }
-                if (target.isActuator() || target.isSensing()) {
-                    terminals.put(target.getIndex(), targetIdx);
-                }
             }
             else {
                 targetIdx = visited.get(target);
             }
             child.addEdge(sourceIdx, targetIdx, edge.getParams()[0], edge.getParams()[1]);
         }
-        return terminals;
     }
 
-    private void visitAndCopyFromPatient(MyController child, MyController parent, Set<MyController.Neuron> frontier,
-                                                 Map<Integer, Integer> terminals) {
-        Map<MyController.Neuron, Integer> visited = new HashMap<>();
+    private void visitAndCopyFromPatient(MyController child, Set<MyController.Neuron> frontier) {
+        /*Map<MyController.Neuron, Integer> visited = new HashMap<>();
         Map<Integer, List<MyController.Edge>> outgoingEdges = parent.getOutgoingEdges();
-        Queue<MyController.Edge> edgeQueue = frontier.stream().flatMap(n -> outgoingEdges.get(n.getIndex()).stream()).collect(Collectors.toCollection(LinkedList::new));
+        Queue<MyController.Edge> edgeQueue = frontier.stream().flatMap(n -> outgoingEdges.getOrDefault(n.getIndex(), new ArrayList<>()).stream()).collect(Collectors.toCollection(LinkedList::new));
         int sourceIdx;
         int targetIdx;
         MyController.Neuron source, target;
@@ -102,12 +143,12 @@ public class CrossoverWithDonation implements Crossover<MyController> {
             source = parent.getNodeMap().get(edge.getSource());
             target = parent.getNodeMap().get(edge.getTarget());
             if (!visited.containsKey(source)) {
-                if (!terminals.containsKey(source.getIndex())) {
+                //if (!terminals.containsKey(source.getIndex())) {
                     sourceIdx = child.copyNeuron(source, false);
-                }
-                else {
-                    sourceIdx = terminals.get(source.getIndex());
-                }
+                //}
+                //else {
+                //    sourceIdx = terminals.get(source.getIndex());
+                //}
                 visited.put(source, sourceIdx);
                 edgeQueue.addAll(source.getIngoingEdges());
             }
@@ -115,12 +156,12 @@ public class CrossoverWithDonation implements Crossover<MyController> {
                 sourceIdx = visited.get(source);
             }
             if (!visited.containsKey(target)) {
-                if (!terminals.containsKey(target.getIndex())) {
+                //if (!terminals.containsKey(target.getIndex())) {
                     targetIdx = child.copyNeuron(target, false);
-                }
-                else {
-                    targetIdx = terminals.get(target.getIndex());
-                }
+                //}
+                //else {
+                //    targetIdx = terminals.get(target.getIndex());
+                //}
                 visited.put(target, targetIdx);
                 if (outgoingEdges.containsKey(target.getIndex())) {
                     edgeQueue.addAll(outgoingEdges.get(target.getIndex()));
@@ -130,6 +171,31 @@ public class CrossoverWithDonation implements Crossover<MyController> {
                 targetIdx = visited.get(target);
             }
             child.addEdge(sourceIdx, targetIdx, edge.getParams()[0], edge.getParams()[1]);
+        }*/
+        Set<MyController.Neuron> destroyed = new HashSet<>();
+        Map<Integer, List<MyController.Edge>> outgoingEdges = child.getOutgoingEdges();
+        Queue<MyController.Edge> edgeQueue = frontier.stream().flatMap(n -> outgoingEdges.getOrDefault(n.getIndex(), new ArrayList<>()).stream()).collect(Collectors.toCollection(LinkedList::new));
+        MyController.Neuron source, target;
+        MyController.Edge edge;
+        while (!edgeQueue.isEmpty()) {
+            edge = edgeQueue.remove();
+            source = child.getNodeMap().get(edge.getSource());
+            target = child.getNodeMap().get(edge.getTarget());
+            if (source != null) {
+                edgeQueue.addAll(source.getIngoingEdges());
+            }
+            if (target != null) {
+                edgeQueue.addAll(outgoingEdges.getOrDefault(target.getIndex(), new ArrayList<>()));
+                child.removeEdge(edge);
+            }
+            if (!destroyed.contains(source) && source != null) {
+                destroyed.add(source);
+                child.removeNeuron(source);
+            }
+            if (!destroyed.contains(target) && target != null) {
+                destroyed.add(target);
+                child.removeNeuron(target);
+            }
         }
     }
 

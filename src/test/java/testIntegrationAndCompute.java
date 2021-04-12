@@ -12,6 +12,9 @@ import org.apache.commons.math3.util.Pair;
 import org.dyn4j.dynamics.Settings;
 import org.junit.Test;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -95,8 +98,39 @@ public class testIntegrationAndCompute {
         for (int i=0; i < 50; ++i) {
             controller = nodeMutation.mutate(controller, random);
         }
+        try {
+            plotBrain(controller, "check");
+        }
+        catch (Exception e) {
+            System.exit(1);
+        }
         Set<MyController.Neuron> startSet = controller.breadthFirstSearch(controller.getNodeSet().stream().filter(MyController.Neuron::isSensing).collect(Collectors.toSet()), x -> false);
         assertEquals(60, startSet.size());
+    }
+
+    private static void plotBrain(MyController controller, String name) throws IOException, InterruptedException {
+        String intermediateFileName = name + ".txt";
+        String outputFileName = name + ".png";
+        try {
+            writeBrainToFile(controller, intermediateFileName);
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        }
+        Process p = Runtime.getRuntime().exec("python python/visualize_brain.py " + intermediateFileName + " " + outputFileName);
+        p.waitFor();
+    }
+
+    private static void writeBrainToFile(MyController controller, String outputName) throws IOException {
+        BufferedWriter writer = new BufferedWriter(new FileWriter(outputName));
+        writer.write("index,x,y,function,edges,type\n");
+        controller.getNodeSet().forEach(n -> {
+            try {
+                writer.write(n.toString() + "\n");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+        writer.close();
     }
 
 }

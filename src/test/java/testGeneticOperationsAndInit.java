@@ -1,6 +1,7 @@
 import buildingBlocks.ControllerFactory;
 import buildingBlocks.MyController;
 import geneticOps.*;
+import it.units.erallab.hmsrobots.core.controllers.MultiLayerPerceptron;
 import morphologies.WormMorphology;
 import org.junit.Test;
 
@@ -51,8 +52,8 @@ public class testGeneticOperationsAndInit {
         assertEquals(1, candidates.length);
         assertTrue(nodes.get(candidates[0].getIngoingEdges().get(0).getSource()).isSensing());
         candidates = nodes.values().stream().filter(n -> n.isActuator() & n.getIngoingEdges().size() == 5).toArray(MyController.Neuron[]::new);
-        assertEquals(1, candidates.length);
-        assertTrue(nodes.get(candidates[0].getIngoingEdges().get(4).getSource()).isHidden());
+        //assertEquals(1, candidates.length);
+        //assertTrue(nodes.get(candidates[0].getIngoingEdges().get(4).getSource()).isHidden());
     }
 
     @Test
@@ -161,7 +162,7 @@ public class testGeneticOperationsAndInit {
     }
 
     @Test
-    public void testCrossoverWithDonationComplex() {
+    public void testCrossoverWithDonationLong() {
         MyController mother = getIdentityController(1.0);
         MyController father = getIdentityController(2.0);
         CrossoverWithDonation crossover = new CrossoverWithDonation();
@@ -179,6 +180,19 @@ public class testGeneticOperationsAndInit {
         }
         MyController newBorn = crossover.recombine(mother, father, random);
         assertEquals(newBorn.breadthFirstSearch(newBorn.getNodeSet().stream().filter(MyController.Neuron::isSensing).collect(Collectors.toSet()), x -> false).size(), newBorn.getNodeSet().size());
+    }
+
+    @Test
+    public void testCrossoverWithDonationComplex() {
+        MyController mother = getIdentityController(1.0);
+        MyController father = getIdentityController(2.0);
+        CrossoverWithDonation crossover = new CrossoverWithDonation();
+        AddEdgeMutation edgeMutation = new AddEdgeMutation(() -> 1.0, 1.0);
+        AddNodeMutation nodeMutation = new AddNodeMutation(() -> 1.0);
+        mother.addHiddenNode(0, 4, MultiLayerPerceptron.ActivationFunction.SIGMOID, 0, 0, () -> 1.0);
+        //mother.addEdge();
+        MyController newBorn = crossover.recombine(mother, father, random);
+
     }
 
 }

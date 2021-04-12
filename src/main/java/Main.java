@@ -241,6 +241,7 @@ public class Main extends Worker {
                     L.info(String.format("Done %s: %d solutions in %4ds", bestFileName, solutions.size(), stopwatch.elapsed(TimeUnit.SECONDS)));
                 } catch (Exception e) {
                     L.severe(String.format("Cannot complete due to %s", e));
+                    e.printStackTrace();
                 }
             }
         }

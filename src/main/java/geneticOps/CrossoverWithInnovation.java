@@ -9,31 +9,35 @@ import java.util.*;
 // index but different semantics than an existing one is created, same for neurons (but, apparently, never happened).
 // As a result, offspring can be disrupted. BE CAREFUL!
 public class CrossoverWithInnovation implements Crossover<MyController> {
-
+    // TODO: horrible try catch, but let's see
     @Override
     public MyController recombine(MyController parent1, MyController parent2, Random random) {
         MyController newBorn = new MyController(Collections.emptyMap());
-        /*Set<MyController.Neuron> allNodes = new HashSet<>(parent1.getNodeSet());
+        Set<MyController.Neuron> allNodes = new HashSet<>(parent1.getNodeSet());
         allNodes.addAll(parent2.getNodeSet());
         allNodes.forEach(n -> newBorn.copyNeuron(n, false));
-        Map<Integer, MyController.Edge> edges1 = parent1.getEdgeMap();
-        Map<Integer, MyController.Edge> edges2 = parent2.getEdgeMap();
-        Set<MyController.Edge> allEdges = new HashSet<>(edges1.values());
-        allEdges.addAll(edges2.values());
-        for (MyController.Edge edge : allEdges) {
-            MyController.Edge fromFirst = edges1.get(edge.getIndex());
-            MyController.Edge fromSecond = edges2.get(edge.getIndex());
-            if (fromFirst != null && fromSecond != null) {
-                newBorn.copyEdge((random.nextBoolean()) ? fromFirst : fromSecond);
+        try {
+            Map<Integer, MyController.Edge> edges1 = parent1.getEdgeMap();
+            Map<Integer, MyController.Edge> edges2 = parent2.getEdgeMap();
+            Set<MyController.Edge> allEdges = new HashSet<>(edges1.values());
+            allEdges.addAll(edges2.values());
+            for (MyController.Edge edge : allEdges) {
+                MyController.Edge fromFirst = edges1.get(edge.getIndex());
+                MyController.Edge fromSecond = edges2.get(edge.getIndex());
+                if (fromFirst != null && fromSecond != null) {
+                    newBorn.copyEdge((random.nextBoolean()) ? fromFirst : fromSecond);
+                } else if (fromFirst != null) {
+                    newBorn.copyEdge(fromFirst);
+                } else {
+                    newBorn.copyEdge(fromSecond);
+                }
             }
-            else if (fromFirst != null) {
-                newBorn.copyEdge(fromFirst);
-            }
-            else {
-                newBorn.copyEdge(fromSecond);
-            }
-        }*/
-        List<MyController.Edge> genes1 = new ArrayList<>(parent1.getEdgeSet());
+        }
+        catch (Exception e) {
+            System.out.println("DUPLICATION ERROR!");
+            return parent1;
+        }
+        /*List<MyController.Edge> genes1 = new ArrayList<>(parent1.getEdgeSet());
         List<MyController.Edge> genes2 = new ArrayList<>(parent2.getEdgeSet());
         genes1.sort(Comparator.comparingInt(MyController.Edge::getIndex));
         genes2.sort(Comparator.comparingInt(MyController.Edge::getIndex));
@@ -68,7 +72,7 @@ public class CrossoverWithInnovation implements Crossover<MyController> {
             curr = rest.get(k);
             this.updateNewBorn(visited, newBorn, (isFirstRemaining) ? parent1 : parent2, curr);
             ++k;
-        }
+        }*/
         return newBorn;
     }
 
