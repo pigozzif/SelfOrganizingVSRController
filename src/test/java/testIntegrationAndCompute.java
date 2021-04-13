@@ -91,46 +91,4 @@ public class testIntegrationAndCompute {
         assertArrayEquals(new double[] {value, value, value, value, value}, nodes.stream().filter(MyController.Neuron::isActuator).mapToDouble(n -> n.send(0)).toArray(), 0.00001);
     }
 
-    @Test
-    public void testBFS() {
-        MyController controller = getIdentityController();
-        AddNodeMutation nodeMutation = new AddNodeMutation(() -> 1.0);
-        for (int i=0; i < 50; ++i) {
-            controller = nodeMutation.mutate(controller, random);
-        }
-        try {
-            plotBrain(controller, "check");
-        }
-        catch (Exception e) {
-            System.exit(1);
-        }
-        Set<MyController.Neuron> startSet = controller.breadthFirstSearch(controller.getNodeSet().stream().filter(MyController.Neuron::isSensing).collect(Collectors.toSet()), x -> false);
-        assertEquals(60, startSet.size());
-    }
-
-    private static void plotBrain(MyController controller, String name) throws IOException, InterruptedException {
-        String intermediateFileName = name + ".txt";
-        String outputFileName = name + ".png";
-        try {
-            writeBrainToFile(controller, intermediateFileName);
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
-        }
-        Process p = Runtime.getRuntime().exec("python python/visualize_brain.py " + intermediateFileName + " " + outputFileName);
-        p.waitFor();
-    }
-
-    private static void writeBrainToFile(MyController controller, String outputName) throws IOException {
-        BufferedWriter writer = new BufferedWriter(new FileWriter(outputName));
-        writer.write("index,x,y,function,edges,type\n");
-        controller.getNodeSet().forEach(n -> {
-            try {
-                writer.write(n.toString() + "\n");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });
-        writer.close();
-    }
-
 }

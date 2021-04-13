@@ -5,6 +5,7 @@ import it.units.erallab.hmsrobots.core.controllers.MultiLayerPerceptron;
 import morphologies.WormMorphology;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -161,7 +162,7 @@ public class testGeneticOperationsAndInit {
         assertEquals(5, newBorn.getNodeSet().stream().filter(MyController.Neuron::isActuator).count());
     }
 
-    @Test
+    @Test(expected=Test.None.class /* no exception expected */)
     public void testCrossoverWithDonationLong() {
         MyController mother = getIdentityController(1.0);
         MyController father = getIdentityController(2.0);
@@ -178,8 +179,7 @@ public class testGeneticOperationsAndInit {
                 mother = nodeMutation.mutate(mother, random);
             }
         }
-        MyController newBorn = crossover.recombine(mother, father, random);
-        assertEquals(newBorn.breadthFirstSearch(newBorn.getNodeSet().stream().filter(MyController.Neuron::isSensing).collect(Collectors.toSet()), x -> false).size(), newBorn.getNodeSet().size());
+        crossover.recombine(mother, father, random);
     }
 
     @Test
@@ -187,12 +187,17 @@ public class testGeneticOperationsAndInit {
         MyController mother = getIdentityController(1.0);
         MyController father = getIdentityController(2.0);
         CrossoverWithDonation crossover = new CrossoverWithDonation();
-        AddEdgeMutation edgeMutation = new AddEdgeMutation(() -> 1.0, 1.0);
-        AddNodeMutation nodeMutation = new AddNodeMutation(() -> 1.0);
         mother.addHiddenNode(0, 4, MultiLayerPerceptron.ActivationFunction.SIGMOID, 0, 0, () -> 1.0);
-        //mother.addEdge();
-        MyController newBorn = crossover.recombine(mother, father, random);
-
+        mother.addEdge(5, 4, 1.0, 1.0);
+        mother.addEdge(8, 14, 1.0, 1.0);
+        father.addHiddenNode(5, 9, MultiLayerPerceptron.ActivationFunction.SIGMOID, 1, 0, () -> 1.0);
+        father.addHiddenNode(3, 25, MultiLayerPerceptron.ActivationFunction.SIGMOID, 0, 0, () -> 1.0);
+        father.addHiddenNode(5, 4, MultiLayerPerceptron.ActivationFunction.SIGMOID, 0, 1, () -> 1.0);
+        MyController newBorn = crossover.amputateVoxel(father, mother, 0, 0);
+        assertEquals(26, newBorn.getNodeSet().size());
+        assertEquals(23, newBorn.getEdgeSet().size());
+        assertEquals(1, newBorn.getNodeSet().stream().filter(MyController.Neuron::isHidden).count());
+        assertEquals(6, newBorn.getNodeSet().stream().filter(n -> n.getY() == 0 && n.getX() == 0).count());
     }
 
 }

@@ -13,188 +13,82 @@ import java.util.stream.Collectors;
 // TODO: for the moment not so nice
 public class CrossoverWithDonation implements Crossover<MyController> {
 
-    private final Set<MyController.Neuron> visitedNeurons;
-    private final Set<MyController.Edge> visitedEdges;
+    private final Map<Integer, MyController.Neuron> visitedNeurons;
+    private final Set<Integer> notToBeRemoved;
+    private int x;
+    private int y;
 
     public CrossoverWithDonation() {
-        this.visitedNeurons = new HashSet<>();
-        this.visitedEdges = new HashSet<>();
+        this.visitedNeurons = new HashMap<>();
+        this.notToBeRemoved = new HashSet<>();
     }
 
     @Override
     public MyController recombine(MyController parent1, MyController parent2, Random random) {
         Pair<Integer, Integer> pair = parent1.getValidCoordinates()[random.nextInt(parent1.getValidCoordinates().length)];
-        int sampleX = pair.getFirst();
-        int sampleY = pair.getSecond();
-        //try {
-        //    plotBrain(parent1, "parent1");
-        //    plotBrain(parent2, "parent2");
-        //}
-        //catch (Exception e) {
-        //    System.exit(1);
-        //}
-        //this.visitAndCopyFromPatient(newBorn, newBorn.getNodeSet().stream().filter(n -> n.getX() == sampleX && n.getY() == sampleY && n.isSensing()).collect(Collectors.toSet()));
-        //int numFromDonator = newBorn.getNodeSet().size();
-        //try {
-        //    plotBrain(newBorn, "child_intermediate");
-        //}
-        //catch (Exception e) {
-        //    System.exit(1);
-        //}
-        //this.visitAndCopyFromDonator(newBorn, parent2, parent2.getNodeSet().stream().filter(n -> n.isSensing() && n.getX() == sampleX && n.getY() == sampleY).collect(Collectors.toSet()));//, sharedTerminals);
-        //System.out.println("Operated on (" + sampleX + "," + sampleY + "), with " + numFromDonator + " from donator and " + (newBorn.getNodeSet().size() - numFromDonator) + " from the other one");
-        /*try {
-            plotBrain(newBorn, "child_final");
-        }
-        catch (Exception e) {
-            System.exit(1);
-        }*/
-
-        return this.amputateVoxel(parent1, parent2, sampleX, sampleY);
+        this.x = pair.getFirst();
+        this.y = pair.getSecond();
+        return this.amputateVoxel(parent1, parent2, this.x, this.y);
     }
 
     public MyController amputateVoxel(MyController parent1, MyController parent2, int x, int y) {
         MyController newBorn = new MyController(parent1);
         this.visit(parent1, parent1.getNodeSet().stream().filter(n -> n.isSensing() && n.getX() == x && n.getY() == y).collect(Collectors.toSet()));
-        this.fillNewBorn(newBorn, false);
+        this.fillFromPatient(newBorn);
         this.visit(parent2, parent2.getNodeSet().stream().filter(n -> n.getX() == x && n.getY() == y && n.isSensing()).collect(Collectors.toSet()));
-        this.fillNewBorn(newBorn, true);
+        this.fillFromDonator(newBorn, parent2);
         return newBorn;
     }
 
-    private void fillNewBorn(MyController child, boolean isDonating) {
-        if (isDonating) {
-            this.visitedNeurons.forEach(n -> child.copyNeuron(n, false));
-            this.visitedEdges.forEach(child::copyEdge);
+    private void fillFromDonator(MyController child, MyController parent) {
+        Map<Integer, Integer> idxMap = new HashMap<>();
+        for (MyController.Neuron neuron : this.visitedNeurons.values()) {
+            idxMap.put(neuron.getIndex(), child.copyNeuron(neuron, false));
         }
-        else {
-            this.visitedEdges.forEach(child::removeEdge);
-            this.visitedNeurons.forEach(child::removeNeuron);
+        for (Integer idx : this.notToBeRemoved) {
+            idxMap.put(idx, idx);
         }
+        for (MyController.Edge edge : parent.getEdgeSet()) {
+            if (this.visitedNeurons.containsKey(edge.getSource()) || this.visitedNeurons.containsKey(edge.getTarget())) {
+                child.addEdge(idxMap.get(edge.getSource()), idxMap.get(edge.getTarget()), edge.getParams()[0], edge.getParams()[1]);
+            }
+        }
+        this.notToBeRemoved.clear();
         this.visitedNeurons.clear();
-        this.visitedEdges.clear();
+    }
+
+    private void fillFromPatient(MyController child) {
+        for (MyController.Neuron neuron : this.visitedNeurons.values()) {
+            child.removeNeuron(neuron);
+        }
+        for (MyController.Edge edge : child.getEdgeSet()) {
+            if (this.visitedNeurons.containsKey(edge.getSource()) || this.visitedNeurons.containsKey(edge.getTarget())) {
+                child.removeEdge(edge);
+            }
+        }
+        this.notToBeRemoved.clear();
+        this.visitedNeurons.clear();
     }
 
     private void visit(MyController parent, Set<MyController.Neuron> frontier) {
+        Queue<MyController.Neuron> neuronQueue = new LinkedList<>(frontier);
         Map<Integer, List<MyController.Edge>> outgoingEdges = parent.getOutgoingEdges();
-        Queue<MyController.Edge> edgeQueue = frontier.stream().flatMap(n -> outgoingEdges.getOrDefault(n.getIndex(), new ArrayList<>()).stream()).collect(Collectors.toCollection(LinkedList::new));
-        MyController.Neuron source, target;
-        MyController.Edge edge;
-        while (!edgeQueue.isEmpty()) {
-            edge = edgeQueue.remove();
-            source = parent.getNodeMap().get(edge.getSource());
-            target = parent.getNodeMap().get(edge.getTarget());
-            if (!this.visitedNeurons.contains(source)) {
-                this.visitedNeurons.add(source);
-                edgeQueue.addAll(source.getIngoingEdges());
+        MyController.Neuron current;
+        while (!neuronQueue.isEmpty()) {
+            current = neuronQueue.remove();
+            if (this.visitedNeurons.containsKey(current.getIndex())) {
+                continue;
             }
-            if (!this.visitedNeurons.contains(target)) {
-                this.visitedNeurons.add(target);
-                edgeQueue.addAll(outgoingEdges.getOrDefault(target.getIndex(), Collections.emptyList()));
+            else if (!current.isHidden() && (current.getX() != this.x || current.getY() != this.y)) {
+                this.notToBeRemoved.add(current.getIndex());
+                continue;
             }
-            this.visitedEdges.add(edge);
-        }
-    }
-
-    private void visitAndCopyFromDonator(MyController child, MyController parent, Set<MyController.Neuron> frontier) {
-        Map<MyController.Neuron, Integer> visited = new HashMap<>();
-        Map<Integer, List<MyController.Edge>> outgoingEdges = parent.getOutgoingEdges();
-        Queue<MyController.Edge> edgeQueue = frontier.stream().flatMap(n -> outgoingEdges.getOrDefault(n.getIndex(), new ArrayList<>()).stream()).collect(Collectors.toCollection(LinkedList::new));
-        int sourceIdx;
-        int targetIdx;
-        MyController.Neuron source, target;
-        MyController.Edge edge;
-        while (!edgeQueue.isEmpty()) {
-            edge = edgeQueue.remove();
-            source = parent.getNodeMap().get(edge.getSource());
-            target = parent.getNodeMap().get(edge.getTarget());
-            if (!visited.containsKey(source)) {
-                sourceIdx = child.copyNeuron(source, false);
-                visited.put(source, sourceIdx);
-                edgeQueue.addAll(source.getIngoingEdges());
+            this.visitedNeurons.put(current.getIndex(), current);
+            for (MyController.Edge edge : current.getIngoingEdges()) {
+                neuronQueue.add(parent.getNodeMap().get(edge.getSource()));
             }
-            else {
-                sourceIdx = visited.get(source);
-            }
-            if (!visited.containsKey(target)) {
-                targetIdx = child.copyNeuron(target, false);
-                visited.put(target, targetIdx);
-                if (outgoingEdges.containsKey(target.getIndex())) {
-                    edgeQueue.addAll(outgoingEdges.get(target.getIndex()));
-                }
-            }
-            else {
-                targetIdx = visited.get(target);
-            }
-            child.addEdge(sourceIdx, targetIdx, edge.getParams()[0], edge.getParams()[1]);
-        }
-    }
-
-    private void visitAndCopyFromPatient(MyController child, Set<MyController.Neuron> frontier) {
-        /*Map<MyController.Neuron, Integer> visited = new HashMap<>();
-        Map<Integer, List<MyController.Edge>> outgoingEdges = parent.getOutgoingEdges();
-        Queue<MyController.Edge> edgeQueue = frontier.stream().flatMap(n -> outgoingEdges.getOrDefault(n.getIndex(), new ArrayList<>()).stream()).collect(Collectors.toCollection(LinkedList::new));
-        int sourceIdx;
-        int targetIdx;
-        MyController.Neuron source, target;
-        MyController.Edge edge;
-        while (!edgeQueue.isEmpty()) {
-            edge = edgeQueue.remove();
-            source = parent.getNodeMap().get(edge.getSource());
-            target = parent.getNodeMap().get(edge.getTarget());
-            if (!visited.containsKey(source)) {
-                //if (!terminals.containsKey(source.getIndex())) {
-                    sourceIdx = child.copyNeuron(source, false);
-                //}
-                //else {
-                //    sourceIdx = terminals.get(source.getIndex());
-                //}
-                visited.put(source, sourceIdx);
-                edgeQueue.addAll(source.getIngoingEdges());
-            }
-            else {
-                sourceIdx = visited.get(source);
-            }
-            if (!visited.containsKey(target)) {
-                //if (!terminals.containsKey(target.getIndex())) {
-                    targetIdx = child.copyNeuron(target, false);
-                //}
-                //else {
-                //    targetIdx = terminals.get(target.getIndex());
-                //}
-                visited.put(target, targetIdx);
-                if (outgoingEdges.containsKey(target.getIndex())) {
-                    edgeQueue.addAll(outgoingEdges.get(target.getIndex()));
-                }
-            }
-            else {
-                targetIdx = visited.get(target);
-            }
-            child.addEdge(sourceIdx, targetIdx, edge.getParams()[0], edge.getParams()[1]);
-        }*/
-        Set<MyController.Neuron> destroyed = new HashSet<>();
-        Map<Integer, List<MyController.Edge>> outgoingEdges = child.getOutgoingEdges();
-        Queue<MyController.Edge> edgeQueue = frontier.stream().flatMap(n -> outgoingEdges.getOrDefault(n.getIndex(), new ArrayList<>()).stream()).collect(Collectors.toCollection(LinkedList::new));
-        MyController.Neuron source, target;
-        MyController.Edge edge;
-        while (!edgeQueue.isEmpty()) {
-            edge = edgeQueue.remove();
-            source = child.getNodeMap().get(edge.getSource());
-            target = child.getNodeMap().get(edge.getTarget());
-            if (source != null) {
-                edgeQueue.addAll(source.getIngoingEdges());
-            }
-            if (target != null) {
-                edgeQueue.addAll(outgoingEdges.getOrDefault(target.getIndex(), new ArrayList<>()));
-                child.removeEdge(edge);
-            }
-            if (!destroyed.contains(source) && source != null) {
-                destroyed.add(source);
-                child.removeNeuron(source);
-            }
-            if (!destroyed.contains(target) && target != null) {
-                destroyed.add(target);
-                child.removeNeuron(target);
+            for (MyController.Edge edge : outgoingEdges.getOrDefault(current.getIndex(), Collections.emptyList())) {
+                neuronQueue.add(parent.getNodeMap().get(edge.getTarget()));
             }
         }
     }

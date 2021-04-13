@@ -109,7 +109,7 @@ public class MyController implements Controller<SensingVoxel> {
         @JsonProperty
         protected final int y;
         @JsonProperty
-        protected final int index;
+        protected int index;
 
         @JsonCreator
         public Neuron(@JsonProperty("index") int idx,
@@ -163,6 +163,8 @@ public class MyController implements Controller<SensingVoxel> {
         }
 
         public int getIndex() { return index; }
+
+        public void setIndex(int idx) { index = idx; }
 
         public List<MyController.Edge> getIngoingEdges() {
            return ingoingEdges;
@@ -346,7 +348,7 @@ public class MyController implements Controller<SensingVoxel> {
             newComer = new ActuatorNeuron(idx, neuron.getX(), neuron.getY());
         }
         else if (neuron instanceof HiddenNeuron)  {
-            idx = /*this.nodes.size()*/neuron.getIndex();
+            idx = this.nodes.size();//neuron.getIndex();
             newComer = new HiddenNeuron(idx, neuron.getActivation(), neuron.getX(), neuron.getY());
         }
         else {
@@ -414,26 +416,6 @@ public class MyController implements Controller<SensingVoxel> {
 
     public void removeNeuron(Neuron neuron) {
         this.nodes.remove(neuron.getIndex());
-    }
-    // TODO: not efficient, to be used only for testing
-    private void recursivelyVisit(Neuron currentNode, Set<Neuron> visited, Predicate<Neuron> stopCondition,
-                                  Map<Integer, List<Edge>> edges) {
-        if (visited.contains(currentNode) || stopCondition.test(currentNode)) {
-            return;
-        }
-        visited.add(currentNode);
-        if (edges.containsKey(currentNode.getIndex())) {
-            this.getOutgoingEdges().get(currentNode.getIndex()).stream().map(e -> this.nodes.get(e.getTarget()))
-                    .forEach(s -> this.recursivelyVisit(s, visited, stopCondition, edges));
-        }
-    }
-
-    public Set<Neuron> breadthFirstSearch(Collection<Neuron> frontier, Predicate<Neuron> stopCondition) {
-        Set<Neuron> visited = new HashSet<>();
-        for (Neuron n : frontier) {
-            this.recursivelyVisit(n, visited, stopCondition, this.getOutgoingEdges());
-        }
-        return visited;
     }
 
     public Pair[] getValidCoordinates() {
