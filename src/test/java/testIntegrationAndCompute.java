@@ -27,11 +27,11 @@ public class testIntegrationAndCompute {
     private static final Random random = new Random(0);
 
     private static MyController getDefaultController() {
-        return new ControllerFactory(random::nextDouble, 1.0, new WormMorphology(5, 1, "vel-area-touch")).build(random);
+        return new ControllerFactory(random::nextDouble, 1.0, 0.0, new WormMorphology(5, 1, "vel-area-touch")).build(random);
     }
 
     private static MyController getIdentityController() {
-        return new ControllerFactory(() -> 1.0, 1.0, new WormMorphology(5, 1, "const")).build(random);
+        return new ControllerFactory(() -> 1.0, 1.0, 0.0, new WormMorphology(5, 1, "const")).build(random);
     }
 
     @Test(expected=Test.None.class /* no exception expected */)

@@ -51,6 +51,8 @@ public class MyController implements Controller<SensingVoxel> {
 
         public Edge(Edge other) {
             this(other.weight, other.bias, other.source, other.target, other.delay);
+            delay = d;
+            enabled = true;
         }
         // TODO: decide whether to keep array alltogether
         public double[] getParams() { return new double[] { weight, bias }; }
@@ -86,7 +88,6 @@ public class MyController implements Controller<SensingVoxel> {
         public int hashCode() {
             return Objects.hash(index);
         }
-
     }
 
     @JsonIgnoreProperties(ignoreUnknown=true)
@@ -436,6 +437,10 @@ public class MyController implements Controller<SensingVoxel> {
 
     public static int computeIndex(int first, int second) {
         return Objects.hash(first, second);
+    }
+
+    public static int flattenCoord(int x, int y, int width) {
+        return y * width + x;
     }
 
     @Override

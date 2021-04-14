@@ -222,10 +222,10 @@ public class Main extends Worker {
                 final Random random = new Random(seed);
                 //build evolver
                 Supplier<Double> parameterSupplier = () -> (random.nextDouble() * 2.0) - 1.0;
-                ControllerFactory genotypeFactory = new ControllerFactory(parameterSupplier, initPerc, morph);
+                ControllerFactory genotypeFactory = new ControllerFactory(parameterSupplier, initPerc, 0.0, morph);
                 RobotMapper mapper = new RobotMapper(morph);
                 Evolver<MyController, Robot<?>, Outcome> evolver = new StandardEvolver<>(mapper, genotypeFactory, PartialComparator.from(Double.class).reversed().comparing(i -> i.getFitness().getVelocity()),
-                        popSize, Map.of(new AddNodeMutation(parameterSupplier), 0.1, new AddEdgeMutation(parameterSupplier, 1.0), 0.1, new MutateEdge(0.35, 0.0), 0.3, new CrossoverWithDonation(), 0.5),// new MutateNode(), 0.25),
+                popSize, Map.of(new AddNodeMutation(parameterSupplier), 0.1, new AddEdgeMutation(parameterSupplier, 1.0), 0.1, new MutateEdge(0.35, 0.0), 0.3, new CrossoverWithDonation(), 0.5),// new MutateNode(), 0.25),
                         new Tournament(5), new Worst(), popSize, true, true);
                 Listener<Event<?, ? extends Robot<?>, ? extends Outcome>> listener = Listener.all(List.of(factory.build()));
                 //optimize

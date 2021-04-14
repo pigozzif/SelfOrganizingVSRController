@@ -59,7 +59,7 @@ class Drawer(object):
         num_sensors = sensors[(x, y)]
         if attr_dict["type"].startswith("SENSING"):
             return (self.pad + self.voxel_size * x + self.blank_size * x + (
-                    (int(re.findall(r'\d+', attr_dict["type"])[0]) + 1) * (self.voxel_size / (num_sensors + 1))),
+                    (int(re.findall(r'\d+', attr_dict["type"])[0]) + 0.5) * (self.voxel_size / (num_sensors + 1))),
                     self.pad + self.voxel_size * y + self.blank_size * y)
         return (self.pad + (self.voxel_size * x + (self.voxel_size / 2) + self.blank_size * x),
                 self.voxel_size * y + self.voxel_size + self.pad + self.blank_size * y)
@@ -124,9 +124,23 @@ def read_file(file_name):
     return nodes, edges, voxel_to_num_sensors
 
 
+def flip_coordinates(nodes, voxel_to_num_sensors):
+    max_y = max([attrs["y"] for attrs in nodes.values()])
+    temp = {}
+    for attrs in nodes.values():
+        value = max_y - attrs["y"]
+        temp[attrs["y"]] = value
+        attrs["y"] = value
+    new_voxel_to_num_sensors = {}
+    for (x, y), num in voxel_to_num_sensors.items():
+        new_voxel_to_num_sensors[(x, temp[y])] = num
+    return nodes, new_voxel_to_num_sensors
+
+
 def main(input_file, output_file):
     nodes, edges, voxel_to_num_sensors = read_file(input_file)
-    voxels = set([(attrs["x"], attrs["y"]) for _, attrs in nodes.items()])
+    nodes, voxel_to_num_sensors = flip_coordinates(nodes, voxel_to_num_sensors)
+    voxels = set([(attrs["x"], attrs["y"]) for attrs in nodes.values()])
     pad = 400
     voxel_size = 400
     node_size = 20

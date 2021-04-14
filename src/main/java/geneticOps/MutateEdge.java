@@ -7,6 +7,7 @@ import it.units.malelab.jgea.representation.sequence.numeric.GaussianMutation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.IntStream;
 
 // when evolving also activation, better to perturb one edge at a time. If not, better to
 // perturb all edges together

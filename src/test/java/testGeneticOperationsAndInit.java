@@ -18,7 +18,7 @@ public class testGeneticOperationsAndInit {
     private static final Random random = new Random(0);
 
     private static MyController getDefaultController() {
-        return new ControllerFactory(random::nextDouble, 1.0, new WormMorphology(5, 1, "vel-area-touch")).build(random);
+        return new ControllerFactory(random::nextDouble, 1.0, 0.0, new WormMorphology(5, 1, "vel-area-touch")).build(random);
     }
 
     private static MyController getIdentityController(double fixedParam) {
@@ -198,6 +198,16 @@ public class testGeneticOperationsAndInit {
         assertEquals(23, newBorn.getEdgeSet().size());
         assertEquals(1, newBorn.getNodeSet().stream().filter(MyController.Neuron::isHidden).count());
         assertEquals(6, newBorn.getNodeSet().stream().filter(n -> n.getY() == 0 && n.getX() == 0).count());
+    }
+
+    @Test
+    public void testNoCycles() {
+        MyController controller = getDefaultController();
+        Mutation<MyController>[] operators = new Mutation[] {new AddEdgeMutation(() -> 1.0, 1.0), new AddNodeMutation(new WormMorphology(5, 1, "vel-area-touch"), () -> 1.0)};
+        for (int i=0; i < 1000; ++i) {
+            controller = operators[random.nextInt(operators.length)].mutate(controller, random);
+            assertFalse(controller.hasCycles());
+        }
     }
 
 }
