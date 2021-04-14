@@ -55,7 +55,7 @@ public class VideoMaker {
         int numDirs = inputFileName.split("/").length;
         String seed = inputFileName.split("/")[numDirs - 1].split("\\.")[1];
         String intermediateFileName = "./ready_to_film/" + inputFileName.split("/")[numDirs - 1];
-        String outputFileName = a(args, "output", "video.biped-4x3.crossover.mp4");
+        String outputFileName = a(args, "output", null);
         String serializedRobotColumn = a(args, "serializedRobotColumnName", "serialized");
         String terrainName = a(args, "terrain", "hilly-1-10-" + seed);
         String transformationName = a(args, "transformation", "identity");

@@ -5,7 +5,6 @@ import it.units.erallab.hmsrobots.core.controllers.MultiLayerPerceptron;
 import morphologies.WormMorphology;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -18,7 +17,7 @@ public class testGeneticOperationsAndInit {
     private static final Random random = new Random(0);
 
     private static MyController getDefaultController() {
-        return new ControllerFactory(random::nextDouble, 1.0, 0.0, new WormMorphology(5, 1, "vel-area-touch")).build(random);
+        return new ControllerFactory(random::nextDouble, 1.0, new WormMorphology(5, 1, "vel-area-touch")).build(random);
     }
 
     private static MyController getIdentityController(double fixedParam) {
@@ -53,8 +52,8 @@ public class testGeneticOperationsAndInit {
         assertEquals(1, candidates.length);
         assertTrue(nodes.get(candidates[0].getIngoingEdges().get(0).getSource()).isSensing());
         candidates = nodes.values().stream().filter(n -> n.isActuator() & n.getIngoingEdges().size() == 5).toArray(MyController.Neuron[]::new);
-        //assertEquals(1, candidates.length);
-        //assertTrue(nodes.get(candidates[0].getIngoingEdges().get(4).getSource()).isHidden());
+        assertEquals(1, candidates.length);
+        assertTrue(nodes.get(candidates[0].getIngoingEdges().get(4).getSource()).isHidden());
     }
 
     @Test
@@ -154,7 +153,7 @@ public class testGeneticOperationsAndInit {
     public void testCrossoverWithDonationSimple() {
         MyController mother = getIdentityController(1.0);
         MyController father = getIdentityController(2.0);
-        CrossoverWithDonation crossover = new CrossoverWithDonation();
+        CrossoverWithDonation crossover = new CrossoverWithDonation("growing");
         MyController newBorn = crossover.recombine(mother, father, random);
         assertEquals(25, newBorn.getNodeSet().size());
         assertEquals(20, newBorn.getEdgeSet().size());
@@ -166,7 +165,7 @@ public class testGeneticOperationsAndInit {
     public void testCrossoverWithDonationLong() {
         MyController mother = getIdentityController(1.0);
         MyController father = getIdentityController(2.0);
-        CrossoverWithDonation crossover = new CrossoverWithDonation();
+        CrossoverWithDonation crossover = new CrossoverWithDonation("growing");
         AddEdgeMutation edgeMutation = new AddEdgeMutation(() -> 1.0, 1.0);
         AddNodeMutation nodeMutation = new AddNodeMutation(() -> 1.0);
         for (int i=0; i < 50; ++i) {
@@ -186,28 +185,18 @@ public class testGeneticOperationsAndInit {
     public void testCrossoverWithDonationComplex() {
         MyController mother = getIdentityController(1.0);
         MyController father = getIdentityController(2.0);
-        CrossoverWithDonation crossover = new CrossoverWithDonation();
+        CrossoverWithDonation crossover = new CrossoverWithDonation("growing");
         mother.addHiddenNode(0, 4, MultiLayerPerceptron.ActivationFunction.SIGMOID, 0, 0, () -> 1.0);
         mother.addEdge(5, 4, 1.0, 1.0);
         mother.addEdge(8, 14, 1.0, 1.0);
         father.addHiddenNode(5, 9, MultiLayerPerceptron.ActivationFunction.SIGMOID, 1, 0, () -> 1.0);
-        father.addHiddenNode(3, 25, MultiLayerPerceptron.ActivationFunction.SIGMOID, 0, 0, () -> 1.0);
+        father.addHiddenNode(3, MyController.computeIndex(5, 9), MultiLayerPerceptron.ActivationFunction.SIGMOID, 0, 0, () -> 1.0);
         father.addHiddenNode(5, 4, MultiLayerPerceptron.ActivationFunction.SIGMOID, 0, 1, () -> 1.0);
-        MyController newBorn = crossover.amputateVoxel(father, mother, 0, 0);
+        MyController newBorn = crossover.amputateVoxel(father, mother, 0, 0, random);
         assertEquals(26, newBorn.getNodeSet().size());
         assertEquals(23, newBorn.getEdgeSet().size());
         assertEquals(1, newBorn.getNodeSet().stream().filter(MyController.Neuron::isHidden).count());
         assertEquals(6, newBorn.getNodeSet().stream().filter(n -> n.getY() == 0 && n.getX() == 0).count());
-    }
-
-    @Test
-    public void testNoCycles() {
-        MyController controller = getDefaultController();
-        Mutation<MyController>[] operators = new Mutation[] {new AddEdgeMutation(() -> 1.0, 1.0), new AddNodeMutation(new WormMorphology(5, 1, "vel-area-touch"), () -> 1.0)};
-        for (int i=0; i < 1000; ++i) {
-            controller = operators[random.nextInt(operators.length)].mutate(controller, random);
-            assertFalse(controller.hasCycles());
-        }
     }
 
 }

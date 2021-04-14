@@ -8,16 +8,11 @@ import morphologies.WormMorphology;
 import it.units.erallab.hmsrobots.core.objects.Robot;
 import it.units.erallab.hmsrobots.tasks.locomotion.Locomotion;
 import it.units.erallab.hmsrobots.tasks.locomotion.Outcome;
-import org.apache.commons.math3.util.Pair;
 import org.dyn4j.dynamics.Settings;
 import org.junit.Test;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
 
@@ -27,11 +22,11 @@ public class testIntegrationAndCompute {
     private static final Random random = new Random(0);
 
     private static MyController getDefaultController() {
-        return new ControllerFactory(random::nextDouble, 1.0, 0.0, new WormMorphology(5, 1, "vel-area-touch")).build(random);
+        return new ControllerFactory(random::nextDouble, 1.0, new WormMorphology(5, 1, "vel-area-touch")).build(random);
     }
 
     private static MyController getIdentityController() {
-        return new ControllerFactory(() -> 1.0, 1.0, 0.0, new WormMorphology(5, 1, "const")).build(random);
+        return new ControllerFactory(() -> 1.0, 1.0, new WormMorphology(5, 1, "const")).build(random);
     }
 
     @Test(expected=Test.None.class /* no exception expected */)
@@ -66,7 +61,7 @@ public class testIntegrationAndCompute {
         controller = (new AddEdgeMutation(() -> 1.0, 1.0)).mutate(controller, random);
         controller = (new MutateNode()).mutate(controller, random);
         controller = (new MutateEdge(0.1, 0.0)).mutate(controller, random);
-        controller = (new CrossoverWithDonation().recombine(controller, getIdentityController(), random));
+        controller = (new CrossoverWithDonation("traditional").recombine(controller, getIdentityController(), random));
         Robot<?> testRobot = new Robot<>(controller, (new WormMorphology(5, 5, "vel-area-touch")).getBody());
         Function<Robot<?>, Outcome> trainingTask = new Locomotion(episodeTime, Locomotion.createTerrain("flat"), physicsSettings);
         trainingTask.apply(testRobot);

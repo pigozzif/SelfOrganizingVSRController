@@ -1,31 +1,29 @@
 package validation;
 
 import buildingBlocks.MyController;
-import org.apache.commons.math3.util.Pair;
+import it.units.erallab.hmsrobots.util.Grid;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 
-public class DonationValidator implements Validator {
+public class DonationAssembler implements Assembler {
 
     private final Map<Integer, MyController.Neuron> visitedNeurons;
-    private final Set<Pair<Integer, Integer>> voxelsToCut;
+    private Grid<Boolean> cuttingGrid;
 
-    public DonationValidator() {
+    public DonationAssembler() {
         this.visitedNeurons = new HashMap<>();
-        this.voxelsToCut = new HashSet<>();
     }
 
     @Override
-    public MyController apply(MyController individual1, MyController individual2, Set<Pair<Integer, Integer>> voxelsFrom2) {
-        this.voxelsToCut.addAll(voxelsFrom2);
-        MyController hybrid = new MyController(individual1);
-        this.visit(individual1, individual1.getNodeSet().stream().filter(n -> n.isSensing() && this.isToCut(n)).collect(Collectors.toSet()));
+    public MyController assemble(MyController controller1, MyController controller2, Grid<Boolean> grid) {
+        this.cuttingGrid = grid;
+        MyController hybrid = new MyController(controller1);
+        this.visit(controller1, controller1.getNodeSet().stream().filter(n -> n.isSensing() && this.isToCut(n)).collect(Collectors.toSet()));
         this.fillFromReceiver(hybrid);
-        this.visit(individual2, individual2.getNodeSet().stream().filter(n -> n.isSensing() && this.isToCut(n)).collect(Collectors.toSet()));
-        this.fillFromDonator(hybrid, individual2);
-        this.voxelsToCut.clear();
+        this.visit(controller2, controller2.getNodeSet().stream().filter(n -> n.isSensing() && this.isToCut(n)).collect(Collectors.toSet()));
+        this.fillFromDonator(hybrid, controller2);
         return hybrid;
     }
 
@@ -75,7 +73,7 @@ public class DonationValidator implements Validator {
     }
 
     private boolean isToCut(MyController.Neuron neuron) {
-        return this.voxelsToCut.contains(new Pair<>(neuron.getX(), neuron.getY()));
+        return this.cuttingGrid.get(neuron.getX(), neuron.getY());
     }
 
 }

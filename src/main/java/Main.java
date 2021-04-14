@@ -17,6 +17,7 @@
 import buildingBlocks.ControllerFactory;
 import buildingBlocks.MyController;
 import buildingBlocks.RobotMapper;
+import buildingBlocks.ValidationFactory;
 import com.google.common.base.Stopwatch;
 import geneticOps.*;
 import it.units.erallab.hmsrobots.core.objects.Robot;
@@ -36,6 +37,7 @@ import it.units.malelab.jgea.core.selector.Worst;
 import it.units.malelab.jgea.core.util.*;
 import morphologies.Morphology;
 import org.dyn4j.dynamics.Settings;
+import validation.ValidationBuilder;
 
 import java.io.File;
 import java.util.*;
@@ -69,12 +71,14 @@ public class Main extends Worker {
     public static final int CACHE_SIZE = 0;
     public static final String SEQUENCE_SEPARATOR_CHAR = ">";
     public static final String SEQUENCE_ITERATION_CHAR = ":";
-    double episodeTime;
-    double episodeTransientTime;
-    double validationEpisodeTime;
-    double validationEpisodeTransientTime;
+    private static final String dir = "./output/";
+    private double episodeTime;
+    private double episodeTransientTime;
+    private double validationEpisodeTime;
+    private double validationEpisodeTransientTime;
     private int popSize;
     private int births;
+    private int s;
     private Random seed;
     private Supplier<Double> parameterSupplier;
     private List<String> terrainNames;
@@ -83,6 +87,7 @@ public class Main extends Worker {
     private List<String> transformationNames;
     private String bestFileName;
     private String validationFileName;
+    private String targetShapeName;
     private List<String> validationTransformationNames;
     private List<String> validationTerrainNames;
     private boolean validationFlag;
@@ -98,11 +103,18 @@ public class Main extends Worker {
     @Override
     public void run() {
         this.parseArguments();
+        Factory<MyController> basicFactory = new ControllerFactory(this.parameterSupplier, this.initPerc, this.morph);
         if (!this.validationFlag) {
             //summarize params
             L.info(String.format("Starting evolution with %s", this.bestFileName));
             //start iterations
-            this.performEvolution(this.prepareListenerFactory(), new ControllerFactory(this.parameterSupplier, this.initPerc, this.morph));
+            this.performEvolution(this.prepareListenerFactory(), basicFactory);
+        }
+        else {
+            //summarize params
+            L.info(String.format("Starting validation with %s", this.bestFileName));
+            //start iterations
+            this.performEvolution(this.prepareListenerFactory(), new ValidationFactory(1.0, Map.of(new AddNodeMutation(this.parameterSupplier), 0.15, new AddEdgeMutation(this.parameterSupplier, 1.0), 0.15, new MutateEdge(0.7, 0.0), 0.7), ValidationBuilder.buildValidation("fixed", "growing", this.getDonator(), this.getReceiver(), this.morph.getBody(), this.seed), basicFactory));
         }
     }
 
@@ -113,21 +125,30 @@ public class Main extends Worker {
         this.validationEpisodeTransientTime = d(a("validationEpisodeTransientTime", Double.toString(episodeTransientTime)));
         this.popSize = i(a("pop", "100"));
         this.births = i(a("births", "200"));
-        this.seed = new Random(Integer.parseInt(Args.a(args, "seed", null)));
+        this.s = Integer.parseInt(Args.a(args, "seed", null));
+        this.seed = new Random(s);
         this.parameterSupplier = () -> (this.seed.nextDouble() * 2.0) - 1.0;
         this.terrainNames = l(a("terrain", "hilly-1-10-rnd"));
         String targetSensorConfigName = Args.a(args, "sensorConfig", "spinedTouchSighted-f-f-0.01");
-        String targetShapeName = Args.a(args, "morphology", null);
-        this.morph = new Morphology(5, 3, targetShapeName, targetSensorConfigName);
+        this.targetShapeName = Args.a(args, "morphology", null);
+        this.morph = new Morphology(5, 3, this.targetShapeName, targetSensorConfigName);
         this.initPerc = Double.parseDouble(Args.a(args, "initPerc", "1.0"));
         this.transformationNames = l(a("transformation", "identity"));
-        this.bestFileName = a("bestFile", "./output/" + String.join(".", "best", String.valueOf(seed), targetShapeName, "csv"));
-        this.validationFileName = a("validationFile", "./output/" + String.join(".", "validation", String.valueOf(seed), targetShapeName, "csv"));
-        this.validationTransformationNames = l(a("validationTransformation", "identity")).stream().filter(s -> !s.isEmpty()).collect(Collectors.toList());
-        this.validationTerrainNames = l(a("validationTerrain", "flat,hilly-1-10-0,hilly-1-10-1,hilly-1-10-2,steppy-1-10-0,steppy-1-10-1,steppy-1-10-2")).stream().filter(s -> !s.isEmpty()).collect(Collectors.toList());
         this.validationFlag = Boolean.parseBoolean(a("validation", "false"));
+        this.bestFileName = a("bestFile", dir + String.join(".", (validationFlag) ? "validation" : "best", String.valueOf(s), this.targetShapeName, "csv"));
+        this.validationFileName = a("validationFile", dir + String.join(".", (validationFlag) ? "validation" : "", "test", String.valueOf(s), this.targetShapeName, "csv"));
+        this.validationTransformationNames = l(a("validationTransformation", "identity")).stream().filter(sen -> !sen.isEmpty()).collect(Collectors.toList());
+        this.validationTerrainNames = l(a("validationTerrain", "flat,hilly-1-10-0,hilly-1-10-1,hilly-1-10-2,steppy-1-10-0,steppy-1-10-1,steppy-1-10-2")).stream().filter(sen -> !sen.isEmpty()).collect(Collectors.toList());
     }
 
+    private String getDonator() {
+        return dir + String.join(".", "best", String.valueOf(this.s), this.targetShapeName, "csv");
+    }
+
+    private String getReceiver() {
+        return dir + String.join(".", "best", String.valueOf((this.s == 4) ? 0 : this.s + 1), this.targetShapeName, "csv");
+    }
+    // TODO: could be called directly inside the evolution
     private Listener.Factory<Event<?, ? extends Robot<?>, ? extends Outcome>> prepareListenerFactory() {
         Function<Outcome, Double> fitnessFunction = Outcome::getVelocity;
         //consumers
@@ -180,7 +201,7 @@ public class Main extends Worker {
                 //build evolver
                 RobotMapper mapper = new RobotMapper(this.morph.getBody());
                 Evolver<MyController, Robot<?>, Outcome> evolver = new StandardEvolver<>(mapper, genotypeFactory, PartialComparator.from(Double.class).reversed().comparing(i -> i.getFitness().getVelocity()),
-                        this.popSize, Map.of(new AddNodeMutation(parameterSupplier), 0.1, new AddEdgeMutation(parameterSupplier, 1.0), 0.1, new MutateEdge(0.35, 0.0), 0.7, new CrossoverWithDonation("growing"), 0.5),// new MutateNode(), 0.25),
+                        this.popSize, Map.of(new AddNodeMutation(parameterSupplier), 0.1, new AddEdgeMutation(parameterSupplier, 1.0), 0.1, new MutateEdge(0.35, 0.0), 0.3),// new CrossoverWithDonation("growing"), 0.5),// new MutateNode(), 0.25),
                         new Tournament(5), new Worst(), this.popSize, true, true);
                 Listener<Event<?, ? extends Robot<?>, ? extends Outcome>> listener = Listener.all(List.of(listenerFactory.build()));
                 //optimize

@@ -10,7 +10,6 @@ import org.apache.commons.math3.util.Pair;
 import java.io.Serializable;
 import java.util.*;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -347,11 +346,14 @@ public class MyController implements Controller<SensingVoxel> {
             newComer = new ActuatorNeuron(idx, neuron.getX(), neuron.getY());
         }
         else if (neuron instanceof HiddenNeuron)  {
-            idx = this.nodes.size();//neuron.getIndex();
+            idx = /*this.nodes.size();*/neuron.getIndex();
             newComer = new HiddenNeuron(idx, neuron.getActivation(), neuron.getX(), neuron.getY());
         }
         else {
             throw new RuntimeException("Neuron type not supported: " + neuron.getClass());
+        }
+        if (this.nodes.containsKey(idx)) {
+            return idx;
         }
         this.nodes.put(idx, newComer);
         if (copyEdges) {
@@ -361,7 +363,7 @@ public class MyController implements Controller<SensingVoxel> {
     }
 
     public void addHiddenNode(int source, int dest, MultiLayerPerceptron.ActivationFunction a, int x, int y, Supplier<Double> parameterSupplier) {
-        int idx = this.nodes.size();//computeIndex(this.nodes.get(source).getIndex(), this.nodes.get(dest).getIndex());
+        int idx = computeIndex(source, dest);/*this.nodes.size();*///computeIndex(this.nodes.get(source).getIndex(), this.nodes.get(dest).getIndex());
         Neuron newNode = new HiddenNeuron(idx, a, x, y);
         this.nodes.put(idx, newNode);
         this.addEdge(source, idx, parameterSupplier.get(), parameterSupplier.get());
@@ -410,7 +412,12 @@ public class MyController implements Controller<SensingVoxel> {
     }
 
     public void removeEdge(Edge edge) {
-        this.nodes.get(edge.getTarget()).getIngoingEdges().remove(edge);
+        this.removeEdge(edge.getSource(), edge.getTarget());
+        //this.nodes.get(edge.getTarget()).getIngoingEdges().remove(edge);
+    }
+
+    public void removeEdge(int source, int target) {
+        this.nodes.get(target).getIngoingEdges().removeIf(e -> e.getSource() == source);
     }
 
     public void removeNeuron(Neuron neuron) {

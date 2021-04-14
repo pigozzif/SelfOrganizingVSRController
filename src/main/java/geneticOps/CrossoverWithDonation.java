@@ -28,10 +28,10 @@ public class CrossoverWithDonation implements Crossover<MyController> {
         Pair<Integer, Integer> pair = parent1.getValidCoordinates()[random.nextInt(parent1.getValidCoordinates().length)];
         this.x = pair.getFirst();
         this.y = pair.getSecond();
-        return this.amputateVoxel(parent1, parent2, this.x, this.y);
+        return this.amputateVoxel(parent1, parent2, this.x, this.y, random);
     }
 
-    public MyController amputateVoxel(MyController parent1, MyController parent2, int x, int y) {
+    public MyController amputateVoxel(MyController parent1, MyController parent2, int x, int y, Random random) {
         MyController newBorn;
         newBorn = new MyController(parent1);
         if (this.strategy.equals("traditional")) {
@@ -42,7 +42,7 @@ public class CrossoverWithDonation implements Crossover<MyController> {
         }
         else if (this.strategy.equals("growing")) {
             this.visit(parent2, parent2.getNodeSet().stream().filter(n -> n.getX() == x && n.getY() == y && n.isSensing()).collect(Collectors.toSet()));
-            this.fillGrowing(newBorn, parent2);
+            this.fillGrowing(newBorn, parent2, random);
         }
         return newBorn;
     }
@@ -54,7 +54,7 @@ public class CrossoverWithDonation implements Crossover<MyController> {
         }
         for (MyController.Edge edge : parent.getEdgeSet()) {
             if (this.visitedNeurons.containsKey(edge.getSource()) || this.visitedNeurons.containsKey(edge.getTarget())) {
-                child.addEdge(idxMap.getOrDefault(edge.getSource(), edge.getSource()), idxMap.getOrDefault(edge.getTarget(), edge.getTarget()), edge.getParams()[0], edge.getParams()[1]);
+                child.addEdge(idxMap.get(edge.getSource()), idxMap.get(edge.getTarget()), edge.getParams()[0], edge.getParams()[1]);
             }
         }
         this.visitedNeurons.clear();
@@ -73,22 +73,47 @@ public class CrossoverWithDonation implements Crossover<MyController> {
         this.visitedNeurons.clear();
     }
 
-    private void fillGrowing(MyController child, MyController parent) {
-        Map<Integer, Integer> idxMap = new HashMap<>();
+    private void fillGrowing(MyController child, MyController parent, Random random) {
+        //Map<Integer, Integer> idxMap = new HashMap<>();
         for (MyController.Neuron neuron : this.visitedNeurons.values()) {
-            idxMap.put(neuron.getIndex(), child.copyNeuron(neuron, false));
+            //idxMap.put(neuron.getIndex(), child.copyNeuron(neuron, false));
+            child.copyNeuron(neuron, false);
         }
         for (MyController.Edge edge : parent.getEdgeSet()) {
             if ((this.visitedNeurons.containsKey(edge.getSource()) || this.visitedNeurons.containsKey(edge.getTarget()))) {
-                int source = idxMap.getOrDefault(edge.getSource(), edge.getSource());
-                int target = idxMap.getOrDefault(edge.getTarget(), edge.getTarget());
-                if (!child.getNodeMap().get(source).isHidden() && !child.getNodeMap().get(target).isHidden()) {
+                //int source = idxMap.getOrDefault(edge.getSource(), edge.getSource());
+                //int target = idxMap.getOrDefault(edge.getTarget(), edge.getTarget());
+                int source = edge.getSource();
+                int target = edge.getTarget();
+                //if (!child.getNodeMap().get(source).isHidden() && !child.getNodeMap().get(target).isHidden()) {
+                //    child.addEdge(source, target, edge.getParams()[0], edge.getParams()[1]);
+                //}
+                if (child.getNodeMap().containsKey(source) && child.getNodeMap().get(target).getIngoingEdges().contains(edge)) {
+                    if (random.nextBoolean()) {
+                        child.removeEdge(source, target);
+                        child.addEdge(source, target, edge.getParams()[0], edge.getParams()[1]);
+                    }
+                }
+                else {
                     child.addEdge(source, target, edge.getParams()[0], edge.getParams()[1]);
                 }
             }
         }
         this.visitedNeurons.clear();
     }
+
+    /*private void prune(MyController child, Random random) {
+        Set<MyController.Edge> visitedEdges = new HashSet<>();
+        for (MyController.Neuron neuron : child.getNodeSet()) {
+            List<MyController.Edge> edges = neuron.getIngoingEdges();
+            Collections.shuffle(edges);
+            for (MyController.Edge edge : edges) {
+                if (visitedEdges.contains(edge)) {
+                    child.removeEdge((random.nextBoolean()) ? edge : );
+                }
+            }
+        }
+    }*/
 
     private void visit(MyController parent, Set<MyController.Neuron> frontier) {
         Queue<MyController.Neuron> neuronQueue = new LinkedList<>(frontier);
