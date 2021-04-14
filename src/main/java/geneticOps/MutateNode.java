@@ -20,13 +20,14 @@ public class MutateNode implements Mutation<MyController> {
     @Override
     public MyController mutate(MyController parent, Random random) {
         MyController newBorn = new MyController(parent);
-        return this.mutateActivation(newBorn, random);
+        this.mutateActivation(newBorn, random);
+        return newBorn;
     }
 
-    private MyController mutateActivation(MyController controller, Random random) {
+    private void mutateActivation(MyController controller, Random random) {
         MyController.Neuron chosenOne = this.pickNode(controller, random);
         if (chosenOne == null) {
-            return controller;
+            return;
         }
         MultiLayerPerceptron.ActivationFunction oldA = chosenOne.getActivation();
         MultiLayerPerceptron.ActivationFunction newA;
@@ -34,7 +35,6 @@ public class MutateNode implements Mutation<MyController> {
             newA = this.functions[random.nextInt(functions.length)];
         } while (newA == oldA);
         chosenOne.setActivation(newA);
-        return controller;
     }
 
     public MyController.Neuron pickNode(MyController controller, Random random) {

@@ -9,12 +9,12 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.IntStream;
 
-
+// when evolving also activation, better to perturb one edge at a time. If not, better to
+// perturb all edges together
 public class MutateEdge implements Mutation<MyController> {
 
     private final GaussianMutation mutation;
     private final double perc;
-    private final int[] delayPicks = IntStream.rangeClosed(0, MyController.Edge.maxDelay).toArray();
 
     public MutateEdge(double sigma, double p) {
         this.mutation = new GaussianMutation(sigma);
@@ -25,28 +25,36 @@ public class MutateEdge implements Mutation<MyController> {
     public MyController mutate(MyController parent, Random random) {
         MyController newBorn = new MyController(parent);
         if (random.nextDouble() >= this.perc) {
-            return this.perturbParameters(newBorn, random);
+            this.perturbParameters(newBorn, random);
         }
-        return this.perturbDelay(newBorn, random);
+        else {
+            this.perturbDelay(newBorn, random);
+        }
+        return newBorn;
     }
 
-    private MyController perturbParameters(MyController controller, Random random) {
-        //controller.getNodeSet().forEach(n -> n.getIngoingEdges().forEach(e -> e.perturbParams(this.mutation.mutate(this.extractParams(e), random))));
-        List<MyController.Edge> edges = controller.getEdgeSet();
-        MyController.Edge candidate = edges.get(random.nextInt(edges.size()));
-        candidate.perturbParams(mutation.mutate(this.extractParams(candidate), random));
-        return controller;
+    private void perturbParameters(MyController controller, Random random) {
+        controller.getNodeSet().forEach(n -> n.getIngoingEdges().forEach(e -> e.perturbParams(this.mutation.mutate(this.extractParams(e), random))));
+        //List<MyController.Edge> edges = controller.getEdgeSet();
+        //MyController.Edge candidate = edges.get(random.nextInt(edges.size()));
+        //candidate.perturbParams(mutation.mutate(this.extractParams(candidate), random));
     }
 
-    private MyController perturbDelay(MyController controller, Random random) {
+    private void perturbDelay(MyController controller, Random random) {
         List<MyController.Edge> edges = controller.getEdgeSet();
         MyController.Edge candidate = edges.get(random.nextInt(edges.size()));
         int d;
-        do {
-            d = this.delayPicks[random.nextInt(this.delayPicks.length)];
-        } while (d == candidate.getDelay());
+        int oldD = candidate.getDelay();
+        if (oldD == 0) {
+            d = 1;
+        }
+        else if (oldD == 9) {
+            d = 8;
+        }
+        else {
+            d = (random.nextBoolean()) ? oldD + 1 : oldD - 1;
+        }
         candidate.perturbDelay(d);
-        return controller;
     }
 
     private List<Double> extractParams(MyController.Edge edge) {

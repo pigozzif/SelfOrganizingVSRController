@@ -25,7 +25,7 @@ public class ControllerFactory implements IndependentFactory<MyController> {
 
     @Override
     public MyController build(Random random) {
-        MyController controller = new MyController(Collections.emptyList());
+        MyController controller = new MyController(Collections.emptyMap());
         for (Grid.Entry<? extends SensingVoxel> voxel : this.morphology.getBody()) {
             if (voxel.getValue() == null) {
                 continue;

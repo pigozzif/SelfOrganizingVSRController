@@ -1,49 +1,47 @@
 package geneticOps;
 
 import buildingBlocks.MyController;
-import morphologies.Morphology;
 import it.units.erallab.hmsrobots.core.controllers.MultiLayerPerceptron;
 import it.units.malelab.jgea.core.operator.Mutation;
+import org.apache.commons.math3.util.Pair;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 
 public class AddNodeMutation implements Mutation<MyController> {
 
-    private final Morphology morphology;
-    private final MultiLayerPerceptron.ActivationFunction[] functions;
     private final Supplier<Double> parameterSupplier;
 
-    public AddNodeMutation(Morphology morph, Supplier<Double> sup) {
-        morphology = morph;
-        functions = MultiLayerPerceptron.ActivationFunction.values();
+    public AddNodeMutation(Supplier<Double> sup) {
         parameterSupplier = sup;
     }
 
     @Override
     public MyController mutate(MyController parent, Random random) {
-        Morphology.Pair sample = morphology.getAllowedMorph().get(random.nextInt(morphology.getAllowedMorph().size()));
-        MultiLayerPerceptron.ActivationFunction a = functions[random.nextInt(functions.length)];
+        Pair<Integer, Integer> pair = parent.getValidCoordinates()[random.nextInt(parent.getValidCoordinates().length)];
+        int sampleX = pair.getFirst();
+        int sampleY = pair.getSecond();
+        //MultiLayerPerceptron.ActivationFunction a = MultiLayerPerceptron.ActivationFunction.values()[random.nextInt(MultiLayerPerceptron.ActivationFunction.values().length)];
         MyController newBorn = new MyController(parent);
-        MyController.Neuron newNode = newBorn.addHiddenNode(a, sample.first, sample.second);
-        List<MyController.Neuron> candidates = newBorn.getNodeSet().stream().filter(n -> newNode.getIndex() != n.getIndex() && MyController.euclideanDistance(newNode, n) <= 1.0)
-                .collect(Collectors.toList());
-        List<Integer> indexes = IntStream.range(0, candidates.size()).boxed().collect(Collectors.toList());
-        int source, dest;
-        //do {
-            Collections.shuffle(indexes, random);
-            source = candidates.get(indexes.stream().filter(i -> !candidates.get(i).isActuator()).findFirst().get()).getIndex();
-            dest = candidates.get(indexes.stream().filter(i -> !candidates.get(i).isSensing()).findFirst().get()).getIndex();
-        //} while (source == dest);
+        //List<MyController.Edge> edges = newBorn.getEdgeSet();
+        //MyController.Edge edge = edges.get(random.nextInt(edges.size()));
+        //newBorn.splitEdge(edge, this.parameterSupplier, random);
+        Map<Integer, MyController.Neuron> candidates = newBorn.getNodeMap().entrySet().stream().filter(n -> MyController.euclideanDistance(sampleX, sampleY, n.getValue().getX(), n.getValue().getY()) <= 1.0)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        Pair<MyController.Neuron, MyController.Neuron> trial = this.pickPair(candidates, random);
         // TODO: is it really necessary to avoid actuators as sources and sensors as targets?
-        newBorn.addEdge(source, newNode.getIndex(), parameterSupplier.get(), parameterSupplier.get());
-        newBorn.addEdge(newNode.getIndex(), dest, parameterSupplier.get(), parameterSupplier.get());
+        newBorn.addHiddenNode(trial.getFirst().getIndex(), trial.getSecond().getIndex(), MultiLayerPerceptron.ActivationFunction.SIGMOID, sampleX, sampleY, this.parameterSupplier);
         return newBorn;
+    }
+
+    private Pair<MyController.Neuron, MyController.Neuron> pickPair(Map<Integer, MyController.Neuron> candidates, Random random) {
+        List<Integer> indexes = new ArrayList<>(candidates.keySet());
+        Collections.shuffle(indexes, random);
+        MyController.Neuron source = candidates.get(indexes.stream().filter(i -> !candidates.get(i).isActuator()).findFirst().get());
+        MyController.Neuron dest = candidates.get(indexes.stream().filter(i -> !candidates.get(i).isSensing()).findFirst().get());
+        return new Pair<>(source, dest);
     }
 
 }

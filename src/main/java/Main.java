@@ -19,10 +19,7 @@ import buildingBlocks.MyController;
 import buildingBlocks.RobotMapper;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
-import geneticOps.AddEdgeMutation;
-import geneticOps.AddNodeMutation;
-import geneticOps.MutateEdge;
-import geneticOps.MutateNode;
+import geneticOps.*;
 import it.units.erallab.hmsrobots.core.objects.Robot;
 import it.units.erallab.hmsrobots.tasks.locomotion.Locomotion;
 import it.units.erallab.hmsrobots.tasks.locomotion.Outcome;
@@ -228,7 +225,7 @@ public class Main extends Worker {
                 ControllerFactory genotypeFactory = new ControllerFactory(parameterSupplier, initPerc, 0.0, morph);
                 RobotMapper mapper = new RobotMapper(morph);
                 Evolver<MyController, Robot<?>, Outcome> evolver = new StandardEvolver<>(mapper, genotypeFactory, PartialComparator.from(Double.class).reversed().comparing(i -> i.getFitness().getVelocity()),
-                        popSize, Map.of(new AddNodeMutation(morph, parameterSupplier), 0.13, new AddEdgeMutation(parameterSupplier, 1.0), 0.13, new MutateEdge(0.35, 0.0), 0.74),// new MutateNode(), 0.1),
+                popSize, Map.of(new AddNodeMutation(parameterSupplier), 0.1, new AddEdgeMutation(parameterSupplier, 1.0), 0.1, new MutateEdge(0.35, 0.0), 0.3, new CrossoverWithDonation(), 0.5),// new MutateNode(), 0.25),
                         new Tournament(5), new Worst(), popSize, true, true);
                 Listener<Event<?, ? extends Robot<?>, ? extends Outcome>> listener = Listener.all(List.of(factory.build()));
                 //optimize
@@ -244,6 +241,7 @@ public class Main extends Worker {
                     L.info(String.format("Done %s: %d solutions in %4ds", bestFileName, solutions.size(), stopwatch.elapsed(TimeUnit.SECONDS)));
                 } catch (Exception e) {
                     L.severe(String.format("Cannot complete due to %s", e));
+                    e.printStackTrace();
                 }
             }
         }
