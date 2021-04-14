@@ -18,21 +18,18 @@ import buildingBlocks.ControllerFactory;
 import buildingBlocks.MyController;
 import buildingBlocks.RobotMapper;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Lists;
 import geneticOps.*;
 import it.units.erallab.hmsrobots.core.objects.Robot;
 import it.units.erallab.hmsrobots.tasks.locomotion.Locomotion;
 import it.units.erallab.hmsrobots.tasks.locomotion.Outcome;
 import it.units.erallab.hmsrobots.util.RobotUtils;
 import it.units.malelab.jgea.Worker;
-import it.units.malelab.jgea.core.Individual;
+import it.units.malelab.jgea.core.Factory;
 import it.units.malelab.jgea.core.evolver.Event;
 import it.units.malelab.jgea.core.evolver.Evolver;
 import it.units.malelab.jgea.core.evolver.StandardEvolver;
 import it.units.malelab.jgea.core.evolver.stopcondition.Births;
-import it.units.malelab.jgea.core.evolver.stopcondition.FitnessEvaluations;
 import it.units.malelab.jgea.core.listener.*;
-import it.units.malelab.jgea.core.listener.telegram.TelegramUpdater;
 import it.units.malelab.jgea.core.order.PartialComparator;
 import it.units.malelab.jgea.core.selector.Tournament;
 import it.units.malelab.jgea.core.selector.Worst;
@@ -72,6 +69,23 @@ public class Main extends Worker {
     public static final int CACHE_SIZE = 0;
     public static final String SEQUENCE_SEPARATOR_CHAR = ">";
     public static final String SEQUENCE_ITERATION_CHAR = ":";
+    double episodeTime;
+    double episodeTransientTime;
+    double validationEpisodeTime;
+    double validationEpisodeTransientTime;
+    private int popSize;
+    private int births;
+    private Random seed;
+    private Supplier<Double> parameterSupplier;
+    private List<String> terrainNames;
+    private Morphology morph;
+    private double initPerc;
+    private List<String> transformationNames;
+    private String bestFileName;
+    private String validationFileName;
+    private List<String> validationTransformationNames;
+    private List<String> validationTerrainNames;
+    private boolean validationFlag;
 
     public Main(String[] args) {
         super(args);
@@ -83,171 +97,112 @@ public class Main extends Worker {
 
     @Override
     public void run() {
-        //int spectrumSize = 10;
-        //double spectrumMinFreq = 0d;
-        //double spectrumMaxFreq = 5d;
-        double episodeTime = d(a("episodeTime", "30"));
-        double episodeTransientTime = d(a("episodeTransientTime", "5"));
-        double validationEpisodeTime = d(a("validationEpisodeTime", Double.toString(episodeTime)));
-        double validationEpisodeTransientTime = d(a("validationEpisodeTransientTime", Double.toString(episodeTransientTime)));
-        //double videoEpisodeTime = d(a("videoEpisodeTime", "10"));
-        //double videoEpisodeTransientTime = d(a("videoEpisodeTransientTime", "0"));
-        int popSize = i(a("pop", "100"));
-        int births = i(a("births", "200"));
-        int seed = Integer.parseInt(Args.a(args, "seed", null));
-        //String experimentName = a("expName", "short");
-        List<String> terrainNames = l(a("terrain", "hilly-1-10-rnd"));
+        this.parseArguments();
+        if (!this.validationFlag) {
+            //summarize params
+            L.info(String.format("Starting evolution with %s", this.bestFileName));
+            //start iterations
+            this.performEvolution(this.prepareListenerFactory(), new ControllerFactory(this.parameterSupplier, this.initPerc, this.morph));
+        }
+    }
+
+    private void parseArguments() {
+        this.episodeTime = d(a("episodeTime", "30"));
+        this.episodeTransientTime = d(a("episodeTransientTime", "5"));
+        this.validationEpisodeTime = d(a("validationEpisodeTime", Double.toString(episodeTime)));
+        this.validationEpisodeTransientTime = d(a("validationEpisodeTransientTime", Double.toString(episodeTransientTime)));
+        this.popSize = i(a("pop", "100"));
+        this.births = i(a("births", "200"));
+        this.seed = new Random(Integer.parseInt(Args.a(args, "seed", null)));
+        this.parameterSupplier = () -> (this.seed.nextDouble() * 2.0) - 1.0;
+        this.terrainNames = l(a("terrain", "hilly-1-10-rnd"));
         String targetSensorConfigName = Args.a(args, "sensorConfig", "spinedTouchSighted-f-f-0.01");
         String targetShapeName = Args.a(args, "morphology", null);
-        Morphology morph = new Morphology(5, 3, targetShapeName, targetSensorConfigName);
-        double initPerc = Double.parseDouble(Args.a(args, "initPerc", "1.0"));
-        List<String> transformationNames = l(a("transformation", "identity"));
-        //List<String> evolverNames = l(a("evolver", "ES-10-0.35"));
-        //List<String> mapperNames = l(a("mapper", "fixedCentralized<pMLP-2-2-tanh-4.5-0.95-abs_signal_mean"));
-        //String lastFileName = a("lastFile", null);
-        String bestFileName = a("bestFile", "./output/" + String.join(".", "best", String.valueOf(seed), targetShapeName, "csv"));
-        //String allFileName = a("allFile", null);
-        String validationFileName = a("validationFile", "./output/" + String.join(".", "validation", String.valueOf(seed), targetShapeName, "csv"));
-        //String telegramBotId = a("telegramBotId", null);
-        //long telegramChatId = Long.parseLong(a("telegramChatId", "0"));
-        //List<String> serializationFlags = l(a("serialization", "")); //last,best,all
-        //boolean output = a("output", "false").startsWith("t");
-        List<String> validationTransformationNames = l(a("validationTransformation", "identity")).stream().filter(s -> !s.isEmpty()).collect(Collectors.toList());
-        List<String> validationTerrainNames = l(a("validationTerrain", "flat,hilly-1-10-0,hilly-1-10-1,hilly-1-10-2,steppy-1-10-0,steppy-1-10-1,steppy-1-10-2")).stream().filter(s -> !s.isEmpty()).collect(Collectors.toList());
+        this.morph = new Morphology(5, 3, targetShapeName, targetSensorConfigName);
+        this.initPerc = Double.parseDouble(Args.a(args, "initPerc", "1.0"));
+        this.transformationNames = l(a("transformation", "identity"));
+        this.bestFileName = a("bestFile", "./output/" + String.join(".", "best", String.valueOf(seed), targetShapeName, "csv"));
+        this.validationFileName = a("validationFile", "./output/" + String.join(".", "validation", String.valueOf(seed), targetShapeName, "csv"));
+        this.validationTransformationNames = l(a("validationTransformation", "identity")).stream().filter(s -> !s.isEmpty()).collect(Collectors.toList());
+        this.validationTerrainNames = l(a("validationTerrain", "flat,hilly-1-10-0,hilly-1-10-1,hilly-1-10-2,steppy-1-10-0,steppy-1-10-1,steppy-1-10-2")).stream().filter(s -> !s.isEmpty()).collect(Collectors.toList());
+        this.validationFlag = Boolean.parseBoolean(a("validation", "false"));
+    }
+
+    private Listener.Factory<Event<?, ? extends Robot<?>, ? extends Outcome>> prepareListenerFactory() {
         Function<Outcome, Double> fitnessFunction = Outcome::getVelocity;
         //consumers
-        //List<NamedFunction<Event<?, ? extends Robot<?>, ? extends Outcome>, ?>> keysFunctions = Utils.keysFunctions();
         List<NamedFunction<Event<?, ? extends Robot<?>, ? extends Outcome>, ?>> basicFunctions = Utils.basicFunctions();
-        //List<NamedFunction<Individual<?, ? extends Robot<?>, ? extends Outcome>, ?>> basicIndividualFunctions = Utils.individualFunctions(fitnessFunction);
         List<NamedFunction<Event<?, ? extends Robot<?>, ? extends Outcome>, ?>> populationFunctions = Utils.populationFunctions(fitnessFunction);
-        //List<NamedFunction<Event<?, ? extends Robot<?>, ? extends Outcome>, ?>> visualFunctions = Utils.visualFunctions(fitnessFunction);
         List<NamedFunction<Outcome, ?>> basicOutcomeFunctions = Utils.basicOutcomeFunctions();
-        //List<NamedFunction<Outcome, ?>> detailedOutcomeFunctions = Utils.detailedOutcomeFunctions(spectrumMinFreq, spectrumMaxFreq, spectrumSize);
-        //List<NamedFunction<Outcome, ?>> visualOutcomeFunctions = Utils.visualOutcomeFunctions(spectrumMinFreq, spectrumMaxFreq);
         Listener.Factory<Event<?, ? extends Robot<?>, ? extends Outcome>> factory = Listener.Factory.deaf();
         //screen listener
-        /*if (bestFileName == null || output) {
-            factory = factory.and(new TabularPrinter<>(Misc.concat(List.of(
-                    basicFunctions,
-                    populationFunctions,
-                    visualFunctions,
-                    NamedFunction.then(best(), basicIndividualFunctions),
-                    NamedFunction.then(as(Outcome.class).of(fitness()).of(best()), basicOutcomeFunctions),
-                    NamedFunction.then(as(Outcome.class).of(fitness()).of(best()), visualOutcomeFunctions)
-            ))));
-        }*/
         //file listeners
-        /*if (lastFileName != null) {
+        if (this.bestFileName != null) {
             factory = factory.and(new CSVPrinter<>(Misc.concat(List.of(
-                    //keysFunctions,
                     basicFunctions,
                     populationFunctions,
-                    //NamedFunction.then(best(), basicIndividualFunctions),
-                    NamedFunction.then(as(Outcome.class).of(fitness()).of(best()), basicOutcomeFunctions)
-                    //NamedFunction.then(as(Outcome.class).of(fitness()).of(best()), detailedOutcomeFunctions),
-                    //NamedFunction.then(best(), Utils.serializationFunction(serializationFlags.contains("last")))
-            )), new File(lastFileName)
-            ).onLast());
-        }*/
-        if (bestFileName != null) {
-            factory = factory.and(new CSVPrinter<>(Misc.concat(List.of(
-                    //keysFunctions,
-                    basicFunctions,
-                    populationFunctions,
-                    //NamedFunction.then(best(), basicIndividualFunctions),
                     NamedFunction.then(as(Outcome.class).of(fitness()).of(best()), basicOutcomeFunctions),
-                    //NamedFunction.then(as(Outcome.class).of(fitness()).of(best()), detailedOutcomeFunctions),
                     NamedFunction.then(best(), Utils.serializationFunction(true))
-            )), new File(bestFileName)
+            )), new File(this.bestFileName)
             ));
         }
-        /*if (allFileName != null) {
-            factory = factory.and(Listener.Factory.forEach(
-                    event -> event.getOrderedPopulation().all().stream()
-                            .map(i -> Pair.of(event, i))
-                            .collect(Collectors.toList()),
-                    new CSVPrinter<>(
-                            Misc.concat(List.of(
-                                    NamedFunction.then(f("event", Pair::first), keysFunctions),
-                                    NamedFunction.then(f("event", Pair::first), basicFunctions),
-                                    NamedFunction.then(f("individual", Pair::second), basicIndividualFunctions),
-                                    NamedFunction.then(f("individual", Pair::second), Utils.serializationFunction(serializationFlags.contains("all")))
-                            )),
-                            new File(allFileName)
-                    )
-            ));
-        }*/
         //validation listener
-        if (validationFileName != null) {
+        if (this.validationFileName != null) {
             Listener.Factory<Event<?, ? extends Robot<?>, ? extends Outcome>> validationFactory = Listener.Factory.forEach(
-                    Utils.validation(validationTerrainNames, validationTransformationNames, List.of(0), validationEpisodeTime),
+                    Utils.validation(this.validationTerrainNames, this.validationTransformationNames, List.of(0), this.validationEpisodeTime),
                     new CSVPrinter<>(
                             Misc.concat(List.of(
                                     NamedFunction.then(f("event", (ValidationOutcome vo) -> vo.event), basicFunctions),
-                                    //NamedFunction.then(f("event", (ValidationOutcome vo) -> vo.event), keysFunctions),
                                     NamedFunction.then(f("keys", (ValidationOutcome vo) -> vo.keys), List.of(
                                             f("validation.terrain", (Map<String, Object> map) -> map.get("validation.terrain")),
                                             f("validation.transformation", (Map<String, Object> map) -> map.get("validation.transformation")),
                                             f("validation.seed", "%2d", (Map<String, Object> map) -> map.get("validation.seed"))
                                     )),
                                     NamedFunction.then(
-                                            f("outcome", (ValidationOutcome vo) -> vo.outcome.subOutcome(validationEpisodeTransientTime, validationEpisodeTime)),
+                                            f("outcome", (ValidationOutcome vo) -> vo.outcome.subOutcome(this.validationEpisodeTransientTime, this.validationEpisodeTime)),
                                             basicOutcomeFunctions
                                     )
-                                    //NamedFunction.then(
-                                    //        f("outcome", (ValidationOutcome vo) -> vo.outcome.subOutcome(validationEpisodeTransientTime, validationEpisodeTime))
-                                            //detailedOutcomeFunctions
-                                    //)
                             )),
-                            new File(validationFileName)
+                            new File(this.validationFileName)
                     )
             ).onLast();
             factory = factory.and(validationFactory);
         }
-        /*if (telegramBotId != null && telegramChatId != 0) {
-            factory = factory.and(new TelegramUpdater<>(List.of(
-                    Utils.lastEventToString(fitnessFunction),
-                    Utils.fitnessPlot(fitnessFunction),
-                    Utils.centerPositionPlot(),
-                    Utils.bestVideo(videoEpisodeTransientTime, videoEpisodeTime, PHYSICS_SETTINGS)
-            ), telegramBotId, telegramChatId));
-        }*/
-        //summarize params
-        L.info(String.format("Starting evolution with %s", bestFileName));
-        //start iterations
+        return factory;
+    }
+
+    private void performEvolution(Listener.Factory<Event<?, ? extends Robot<?>, ? extends Outcome>> listenerFactory,
+                                  Factory<MyController> genotypeFactory) {
         int counter = 0;
-        for (String terrainName : terrainNames) {
-            for (String transformationName : transformationNames) {
+        for (String terrainName : this.terrainNames) {
+            for (String transformationName : this.transformationNames) {
                 counter = counter + 1;
-                final Random random = new Random(seed);
                 //build evolver
-                Supplier<Double> parameterSupplier = () -> (random.nextDouble() * 2.0) - 1.0;
-                ControllerFactory genotypeFactory = new ControllerFactory(parameterSupplier, initPerc, 0.0, morph);
-                RobotMapper mapper = new RobotMapper(morph);
+                RobotMapper mapper = new RobotMapper(this.morph.getBody());
                 Evolver<MyController, Robot<?>, Outcome> evolver = new StandardEvolver<>(mapper, genotypeFactory, PartialComparator.from(Double.class).reversed().comparing(i -> i.getFitness().getVelocity()),
-                popSize, Map.of(new AddNodeMutation(parameterSupplier), 0.1, new AddEdgeMutation(parameterSupplier, 1.0), 0.1, new MutateEdge(0.35, 0.0), 0.3, new CrossoverWithDonation(), 0.5),// new MutateNode(), 0.25),
-                        new Tournament(5), new Worst(), popSize, true, true);
-                Listener<Event<?, ? extends Robot<?>, ? extends Outcome>> listener = Listener.all(List.of(factory.build()));
+                        this.popSize, Map.of(new AddNodeMutation(parameterSupplier), 0.1, new AddEdgeMutation(parameterSupplier, 1.0), 0.1, new MutateEdge(0.35, 0.0), 0.7, new CrossoverWithDonation("growing"), 0.5),// new MutateNode(), 0.25),
+                        new Tournament(5), new Worst(), this.popSize, true, true);
+                Listener<Event<?, ? extends Robot<?>, ? extends Outcome>> listener = Listener.all(List.of(listenerFactory.build()));
                 //optimize
                 Stopwatch stopwatch = Stopwatch.createStarted();
                 try {
                     Collection<Robot<?>> solutions = evolver.solve(
-                            buildTaskFromName(transformationName, terrainName, episodeTime, random).andThen(o -> o.subOutcome(episodeTransientTime, episodeTime)),
-                            new Births(births),
-                            random,
+                            buildTaskFromName(transformationName, terrainName, this.episodeTime, this.seed).andThen(o -> o.subOutcome(this.episodeTransientTime, this.episodeTime)),
+                            new Births(this.births),
+                            this.seed,
                             this.executorService,
                             listener
                     );
-                    L.info(String.format("Done %s: %d solutions in %4ds", bestFileName, solutions.size(), stopwatch.elapsed(TimeUnit.SECONDS)));
+                    L.info(String.format("Done %s: %d solutions in %4ds", this.bestFileName, solutions.size(), stopwatch.elapsed(TimeUnit.SECONDS)));
                 } catch (Exception e) {
                     L.severe(String.format("Cannot complete due to %s", e));
                     e.printStackTrace();
                 }
             }
         }
-        factory.shutdown();
+        listenerFactory.shutdown();
     }
-
+    // TODO: all these static methods could be moved to Utils
     public static Function<Robot<?>, Outcome> buildTaskFromName(String transformationSequenceName, String
             terrainSequenceName, double episodeT, Random random) {
         //for sequence, assume format '99:name>99:name'

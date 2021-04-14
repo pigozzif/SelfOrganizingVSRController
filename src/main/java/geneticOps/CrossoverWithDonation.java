@@ -14,13 +14,13 @@ import java.util.stream.Collectors;
 public class CrossoverWithDonation implements Crossover<MyController> {
 
     private final Map<Integer, MyController.Neuron> visitedNeurons;
-    private final Set<Integer> notToBeRemoved;
     private int x;
     private int y;
+    private final String strategy;
 
-    public CrossoverWithDonation() {
+    public CrossoverWithDonation(String strategy) {
         this.visitedNeurons = new HashMap<>();
-        this.notToBeRemoved = new HashSet<>();
+        this.strategy = strategy;
     }
 
     @Override
@@ -32,11 +32,18 @@ public class CrossoverWithDonation implements Crossover<MyController> {
     }
 
     public MyController amputateVoxel(MyController parent1, MyController parent2, int x, int y) {
-        MyController newBorn = new MyController(parent1);
-        this.visit(parent1, parent1.getNodeSet().stream().filter(n -> n.isSensing() && n.getX() == x && n.getY() == y).collect(Collectors.toSet()));
-        this.fillFromPatient(newBorn);
-        this.visit(parent2, parent2.getNodeSet().stream().filter(n -> n.getX() == x && n.getY() == y && n.isSensing()).collect(Collectors.toSet()));
-        this.fillFromDonator(newBorn, parent2);
+        MyController newBorn;
+        newBorn = new MyController(parent1);
+        if (this.strategy.equals("traditional")) {
+            this.visit(parent1, parent1.getNodeSet().stream().filter(n -> n.isSensing() && n.getX() == x && n.getY() == y).collect(Collectors.toSet()));
+            this.fillFromPatient(newBorn);
+            this.visit(parent2, parent2.getNodeSet().stream().filter(n -> n.getX() == x && n.getY() == y && n.isSensing()).collect(Collectors.toSet()));
+            this.fillFromDonator(newBorn, parent2);
+        }
+        else if (this.strategy.equals("growing")) {
+            this.visit(parent2, parent2.getNodeSet().stream().filter(n -> n.getX() == x && n.getY() == y && n.isSensing()).collect(Collectors.toSet()));
+            this.fillGrowing(newBorn, parent2);
+        }
         return newBorn;
     }
 
@@ -45,15 +52,11 @@ public class CrossoverWithDonation implements Crossover<MyController> {
         for (MyController.Neuron neuron : this.visitedNeurons.values()) {
             idxMap.put(neuron.getIndex(), child.copyNeuron(neuron, false));
         }
-        for (Integer idx : this.notToBeRemoved) {
-            idxMap.put(idx, idx);
-        }
         for (MyController.Edge edge : parent.getEdgeSet()) {
             if (this.visitedNeurons.containsKey(edge.getSource()) || this.visitedNeurons.containsKey(edge.getTarget())) {
-                child.addEdge(idxMap.get(edge.getSource()), idxMap.get(edge.getTarget()), edge.getParams()[0], edge.getParams()[1]);
+                child.addEdge(idxMap.getOrDefault(edge.getSource(), edge.getSource()), idxMap.getOrDefault(edge.getTarget(), edge.getTarget()), edge.getParams()[0], edge.getParams()[1]);
             }
         }
-        this.notToBeRemoved.clear();
         this.visitedNeurons.clear();
     }
 
@@ -66,7 +69,24 @@ public class CrossoverWithDonation implements Crossover<MyController> {
                 child.removeEdge(edge);
             }
         }
-        this.notToBeRemoved.clear();
+        child.resetIndexes();
+        this.visitedNeurons.clear();
+    }
+
+    private void fillGrowing(MyController child, MyController parent) {
+        Map<Integer, Integer> idxMap = new HashMap<>();
+        for (MyController.Neuron neuron : this.visitedNeurons.values()) {
+            idxMap.put(neuron.getIndex(), child.copyNeuron(neuron, false));
+        }
+        for (MyController.Edge edge : parent.getEdgeSet()) {
+            if ((this.visitedNeurons.containsKey(edge.getSource()) || this.visitedNeurons.containsKey(edge.getTarget()))) {
+                int source = idxMap.getOrDefault(edge.getSource(), edge.getSource());
+                int target = idxMap.getOrDefault(edge.getTarget(), edge.getTarget());
+                if (!child.getNodeMap().get(source).isHidden() && !child.getNodeMap().get(target).isHidden()) {
+                    child.addEdge(source, target, edge.getParams()[0], edge.getParams()[1]);
+                }
+            }
+        }
         this.visitedNeurons.clear();
     }
 
@@ -76,11 +96,7 @@ public class CrossoverWithDonation implements Crossover<MyController> {
         MyController.Neuron current;
         while (!neuronQueue.isEmpty()) {
             current = neuronQueue.remove();
-            if (this.visitedNeurons.containsKey(current.getIndex())) {
-                continue;
-            }
-            else if (!current.isHidden() && (current.getX() != this.x || current.getY() != this.y)) {
-                this.notToBeRemoved.add(current.getIndex());
+            if (this.visitedNeurons.containsKey(current.getIndex()) || (!current.isHidden() && (current.getX() != this.x || current.getY() != this.y))) {
                 continue;
             }
             this.visitedNeurons.put(current.getIndex(), current);

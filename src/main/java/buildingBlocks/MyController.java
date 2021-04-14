@@ -51,8 +51,6 @@ public class MyController implements Controller<SensingVoxel> {
 
         public Edge(Edge other) {
             this(other.weight, other.bias, other.source, other.target, other.delay);
-            delay = d;
-            enabled = true;
         }
         // TODO: decide whether to keep array alltogether
         public double[] getParams() { return new double[] { weight, bias }; }
@@ -423,6 +421,15 @@ public class MyController implements Controller<SensingVoxel> {
         return this.getNodeSet().stream().map(n -> new Pair<>(n.getX(), n.getY())).distinct().toArray(Pair[]::new);
     }
 
+    public void resetIndexes() {
+        int idx = (int) this.getNodeSet().stream().filter(n -> !n.isHidden()).count();
+        for (Neuron neuron : this.getNodeSet()) {
+            if (neuron instanceof HiddenNeuron) {
+                neuron.setIndex(idx++);
+            }
+        }
+    }
+
     public static double euclideanDistance(Neuron n1, Neuron n2) {
         return euclideanDistance(n1.getX(), n1.getY(), n2.getX(), n2.getY());
     }
@@ -437,10 +444,6 @@ public class MyController implements Controller<SensingVoxel> {
 
     public static int computeIndex(int first, int second) {
         return Objects.hash(first, second);
-    }
-
-    public static int flattenCoord(int x, int y, int width) {
-        return y * width + x;
     }
 
     @Override

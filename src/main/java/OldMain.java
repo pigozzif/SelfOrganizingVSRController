@@ -71,8 +71,8 @@ public class OldMain extends Worker {
     @Override
     public void run() {
         Supplier<Double> parameterSupplier = () -> (random.nextDouble() * 2.0) - 1.0;
-        ControllerFactory factory = new ControllerFactory(parameterSupplier, initPerc, 0.0, morph);
-        RobotMapper mapper = new RobotMapper(morph);
+        ControllerFactory factory = new ControllerFactory(parameterSupplier, initPerc, morph);
+        RobotMapper mapper = new RobotMapper(morph.getBody());
         Settings physicsSettings = new Settings();
         Evolver<MyController, Robot<?>, Outcome> evolver = new StandardEvolver<>(mapper, factory, PartialComparator.from(Double.class).reversed().comparing(i -> i.getFitness().getDistance()),
                 100, Map.of(new AddNodeMutation(parameterSupplier), 0.25, new AddEdgeMutation(parameterSupplier, 1.0), 0.25, new MutateEdge(0.35, 0.0), 0.25, new MutateNode(), 0.25),

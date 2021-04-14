@@ -12,14 +12,12 @@ import java.util.function.Supplier;
 public class ControllerFactory implements IndependentFactory<MyController> {
 
     private final Supplier<Double> parameterSupplier;
-    private final double fillPercInside;
-    private final double fillPercAdjacent;
+    private final double fillPerc;
     private final Morphology morphology;
 
-    public ControllerFactory(Supplier<Double> s, double pi, double po, Morphology morph) {
+    public ControllerFactory(Supplier<Double> s, double perc, Morphology morph) {
         this.parameterSupplier = s;
-        this.fillPercInside = pi;
-        this.fillPercAdjacent = po;
+        this.fillPerc = perc;
         this.morphology = morph;
     }
 
@@ -38,7 +36,7 @@ public class ControllerFactory implements IndependentFactory<MyController> {
             controller.addActuatorNode(x, y);
         }
         this.initInVoxelEdges(controller, random);
-        this.initAdjacentVoxelEdges(controller, random);
+        //this.initAdjacentVoxelEdges(controller, random);
         return controller;
     }
 
@@ -46,14 +44,14 @@ public class ControllerFactory implements IndependentFactory<MyController> {
         for (MyController.Neuron n1 : controller.getNodeSet()) {
             for (MyController.Neuron n2 : controller.getNodeSet()) {
                 if (n1.isSensing() && n2.isActuator() &&
-                        n1.getX() == n2.getX() && n1.getY() == n2.getY() && random.nextDouble() < this.fillPercInside) {
+                        n1.getX() == n2.getX() && n1.getY() == n2.getY() && random.nextDouble() < this.fillPerc) {
                     controller.addEdge(n1.getIndex(), n2.getIndex(), this.parameterSupplier.get(), this.parameterSupplier.get());
                 }
             }
         }
     }
 
-    private void initAdjacentVoxelEdges(MyController controller, Random random) {
+    /*private void initAdjacentVoxelEdges(MyController controller, Random random) {
         for (MyController.Neuron n1 : controller.getNodeSet()) {
             for (MyController.Neuron n2 : controller.getNodeSet()) {
                 if (n1.isSensing() && n2.isActuator() &&
@@ -62,6 +60,6 @@ public class ControllerFactory implements IndependentFactory<MyController> {
                 }
             }
         }
-    }
+    }*/
 
 }
