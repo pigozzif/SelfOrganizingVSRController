@@ -202,7 +202,7 @@ public class Main extends Worker {
                 //build evolver
                 RobotMapper mapper = new RobotMapper(this.morph.getBody());
                 Evolver<MyController, Robot<?>, Outcome> evolver = new StandardEvolver<>(mapper, genotypeFactory, PartialComparator.from(Double.class).reversed().comparing(i -> i.getFitness().getVelocity()),
-                        this.popSize, Map.of(new AddNodeMutation(this.parameterSupplier), 0.1, new AddEdgeMutation(this.parameterSupplier, 1.0), 0.1, new MutateEdge(0.7, 0.0), 0.7, new CrossoverWithDonation("growing"), 0.1),// new MutateNode(), 0.25),
+                        this.popSize, Map.of(new AddNodeMutation(this.parameterSupplier), 0.1, new AddEdgeMutation(this.parameterSupplier, 1.0), 0.1, new MutateEdge(0.35, 0.0), 0.8),// new CrossoverWithDonation("growing"), 0.1),// new MutateNode(), 0.25),
                         new Tournament(5), new Worst(), this.popSize, true, true);
                 Listener<Event<?, ? extends Robot<?>, ? extends Outcome>> listener = Listener.all(List.of(listenerFactory.build()));
                 //optimize

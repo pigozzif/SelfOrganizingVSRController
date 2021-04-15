@@ -10,8 +10,8 @@ import java.util.stream.Collectors;
 
 public class DonationAssembler implements Assembler {
 
-    protected final Map<Integer, MyController.Neuron> visitedNeurons;
-    protected Grid<Boolean> cuttingGrid;
+    private final Map<Integer, MyController.Neuron> visitedNeurons;
+    private Grid<Boolean> cuttingGrid;
 
     public DonationAssembler() {
         this.visitedNeurons = new HashMap<>();
@@ -39,7 +39,7 @@ public class DonationAssembler implements Assembler {
         this.visitedNeurons.clear();
     }
 
-    protected void visit(MyController parent, Set<MyController.Neuron> frontier, Predicate<MyController.Neuron> stopCondition) {
+    private void visit(MyController parent, Set<MyController.Neuron> frontier, Predicate<MyController.Neuron> stopCondition) {
         Queue<MyController.Neuron> neuronQueue = new LinkedList<>(frontier);
         Map<Integer, List<MyController.Edge>> outgoingEdges = parent.getOutgoingEdges();
         MyController.Neuron current;
@@ -62,7 +62,7 @@ public class DonationAssembler implements Assembler {
         return controller.getNodeSet().stream().filter(n -> n.isSensing() && this.isToCut(n)).collect(Collectors.toSet());
     }
 
-    protected boolean isToCut(MyController.Neuron neuron) {
+    private boolean isToCut(MyController.Neuron neuron) {
         return this.cuttingGrid.get(neuron.getX(), neuron.getY());
     }
 

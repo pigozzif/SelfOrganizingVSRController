@@ -23,9 +23,9 @@ public class MyController implements Controller<SensingVoxel> {
         @JsonProperty
         private double bias;
         @JsonProperty
-        private final int source;
+        private int source; // TODO: might cause issues with deserialization
         @JsonProperty
-        private final int target;
+        private int target;
         @JsonProperty
         private int delay;
         @JsonProperty
@@ -65,7 +65,11 @@ public class MyController implements Controller<SensingVoxel> {
 
         public int getSource() { return source; }
 
+        public void setSource(int newSource) { source = newSource; }
+
         public int getTarget() { return target; }
+
+        public void setTarget(int newTarget) { target = newTarget; }
 
         public boolean isEnabled() { return enabled; }
 
@@ -298,12 +302,12 @@ public class MyController implements Controller<SensingVoxel> {
     }
 
     @JsonProperty
-    private final Map<Integer, Neuron> nodes;
+    private Map<Integer, Neuron> nodes;
 
     @JsonCreator
-    public MyController(@JsonProperty("nodes") Map<Integer, Neuron> n) {
+    public MyController(@JsonProperty("nodes") Map<Integer, Neuron> neurons) {
         this.nodes = new HashMap<>();
-        for (Neuron entry : n.values()) {
+        for (Neuron entry : neurons.values()) {
             this.copyNeuron(entry, true);
         }
     }
@@ -346,14 +350,14 @@ public class MyController implements Controller<SensingVoxel> {
             newComer = new ActuatorNeuron(idx, neuron.getX(), neuron.getY());
         }
         else if (neuron instanceof HiddenNeuron)  {
-            idx = /*this.nodes.size();*/neuron.getIndex();
+            idx = this.nodes.size();//neuron.getIndex();
             newComer = new HiddenNeuron(idx, neuron.getActivation(), neuron.getX(), neuron.getY());
+            if (this.nodes.containsKey(idx)) {
+                throw new IllegalArgumentException("Inserting already-present neuron: " + idx);
+            }
         }
         else {
             throw new RuntimeException("Neuron type not supported: " + neuron.getClass());
-        }
-        if (this.nodes.containsKey(idx)) {
-            return idx;
         }
         this.nodes.put(idx, newComer);
         if (copyEdges) {
@@ -363,7 +367,7 @@ public class MyController implements Controller<SensingVoxel> {
     }
 
     public void addHiddenNode(int source, int dest, MultiLayerPerceptron.ActivationFunction a, int x, int y, Supplier<Double> parameterSupplier) {
-        int idx = computeIndex(source, dest);/*this.nodes.size();*///computeIndex(this.nodes.get(source).getIndex(), this.nodes.get(dest).getIndex());
+        int idx = /*computeIndex(source, dest);*/this.nodes.size();
         Neuron newNode = new HiddenNeuron(idx, a, x, y);
         this.nodes.put(idx, newNode);
         this.addEdge(source, idx, parameterSupplier.get(), parameterSupplier.get());
@@ -394,7 +398,7 @@ public class MyController implements Controller<SensingVoxel> {
 
     public void addSensingNode(int x, int y, int s) {
         int idx = this.nodes.size();
-        Neuron newNode = new SensingNeuron(this.nodes.size(), x, y, s);
+        Neuron newNode = new SensingNeuron(idx, x, y, s);
         this.nodes.put(idx, newNode);
     }
 
@@ -413,7 +417,6 @@ public class MyController implements Controller<SensingVoxel> {
 
     public void removeEdge(Edge edge) {
         this.removeEdge(edge.getSource(), edge.getTarget());
-        //this.nodes.get(edge.getTarget()).getIngoingEdges().remove(edge);
     }
 
     public void removeEdge(int source, int target) {
@@ -421,7 +424,13 @@ public class MyController implements Controller<SensingVoxel> {
     }
 
     public void removeNeuron(Neuron neuron) {
+        for (Edge edge : this.getEdgeSet()) {
+            if (edge.getSource() == neuron.getIndex() || edge.getTarget() == neuron.getIndex()) {
+                this.removeEdge(edge);
+            }
+        }
         this.nodes.remove(neuron.getIndex());
+        this.resetIndexes();
     }
 
     public Pair[] getValidCoordinates() {
@@ -430,11 +439,22 @@ public class MyController implements Controller<SensingVoxel> {
 
     public void resetIndexes() {
         int idx = (int) this.getNodeSet().stream().filter(n -> !n.isHidden()).count();
+        Map<Integer, Integer> oldToNew = new HashMap<>();
         for (Neuron neuron : this.getNodeSet()) {
             if (neuron instanceof HiddenNeuron) {
+                oldToNew.put(neuron.getIndex(), idx);
                 neuron.setIndex(idx++);
             }
         }
+        for (Edge edge : this.getEdgeSet()) {
+            edge.setSource(oldToNew.getOrDefault(edge.getSource(), edge.getSource()));
+            edge.setTarget(oldToNew.getOrDefault(edge.getTarget(), edge.getTarget()));
+        }
+        Map<Integer, Neuron> newNodes = new HashMap<>();
+        for (Map.Entry<Integer, Neuron> entry : this.nodes.entrySet()) {
+            newNodes.put(oldToNew.getOrDefault(entry.getKey(), entry.getKey()), entry.getValue());
+        }
+        this.nodes = newNodes;
     }
 
     public static double euclideanDistance(Neuron n1, Neuron n2) {
