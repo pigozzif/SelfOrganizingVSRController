@@ -4,25 +4,24 @@ import buildingBlocks.MyController;
 import it.units.erallab.hmsrobots.util.Grid;
 
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 
 public class DonationAssembler implements Assembler {
 
-    private final Map<Integer, MyController.Neuron> visitedNeurons;
-    private Grid<Boolean> cuttingGrid;
+    protected final Map<Integer, MyController.Neuron> visitedNeurons;
+    protected Grid<Boolean> cuttingGrid;
 
     public DonationAssembler() {
         this.visitedNeurons = new HashMap<>();
     }
 
     @Override
-    public MyController assemble(MyController controller1, MyController controller2, Grid<Boolean> grid) {
+    public MyController assemble(MyController controller1, MyController controller2, Grid<Boolean> grid, Random random) {
         this.cuttingGrid = grid;
         MyController hybrid = new MyController(controller1);
-        this.visit(controller1, controller1.getNodeSet().stream().filter(n -> n.isSensing() && this.isToCut(n)).collect(Collectors.toSet()));
-        this.fillFromReceiver(hybrid);
-        this.visit(controller2, controller2.getNodeSet().stream().filter(n -> n.isSensing() && this.isToCut(n)).collect(Collectors.toSet()));
+        this.visit(controller2, this.getSensingNeuronsFromVoxel(controller2), x -> (!x.isHidden() && !this.isToCut(x)));
         this.fillFromDonator(hybrid, controller2);
         return hybrid;
     }
@@ -40,26 +39,13 @@ public class DonationAssembler implements Assembler {
         this.visitedNeurons.clear();
     }
 
-    private void fillFromReceiver(MyController child) {
-        for (MyController.Neuron neuron : this.visitedNeurons.values()) {
-            child.removeNeuron(neuron);
-        }
-        for (MyController.Edge edge : child.getEdgeSet()) {
-            if (this.visitedNeurons.containsKey(edge.getSource()) || this.visitedNeurons.containsKey(edge.getTarget())) {
-                child.removeEdge(edge);
-            }
-        }
-        child.resetIndexes();
-        this.visitedNeurons.clear();
-    }
-
-    private void visit(MyController parent, Set<MyController.Neuron> frontier) {
+    protected void visit(MyController parent, Set<MyController.Neuron> frontier, Predicate<MyController.Neuron> stopCondition) {
         Queue<MyController.Neuron> neuronQueue = new LinkedList<>(frontier);
         Map<Integer, List<MyController.Edge>> outgoingEdges = parent.getOutgoingEdges();
         MyController.Neuron current;
         while (!neuronQueue.isEmpty()) {
             current = neuronQueue.remove();
-            if (this.visitedNeurons.containsKey(current.getIndex()) || (!current.isHidden() && !this.isToCut(current))) {
+            if (this.visitedNeurons.containsKey(current.getIndex()) || stopCondition.test(current)) {
                 continue;
             }
             this.visitedNeurons.put(current.getIndex(), current);
@@ -72,7 +58,11 @@ public class DonationAssembler implements Assembler {
         }
     }
 
-    private boolean isToCut(MyController.Neuron neuron) {
+    protected Set<MyController.Neuron> getSensingNeuronsFromVoxel(MyController controller) {
+        return controller.getNodeSet().stream().filter(n -> n.isSensing() && this.isToCut(n)).collect(Collectors.toSet());
+    }
+
+    protected boolean isToCut(MyController.Neuron neuron) {
         return this.cuttingGrid.get(neuron.getX(), neuron.getY());
     }
 

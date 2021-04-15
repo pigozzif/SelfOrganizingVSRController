@@ -71,7 +71,7 @@ public class Main extends Worker {
     public static final int CACHE_SIZE = 0;
     public static final String SEQUENCE_SEPARATOR_CHAR = ">";
     public static final String SEQUENCE_ITERATION_CHAR = ":";
-    private static final String dir = "./output/";
+    private static final String dir = "./output/one_edge_0.7/";
     private double episodeTime;
     private double episodeTransientTime;
     private double validationEpisodeTime;
@@ -114,7 +114,8 @@ public class Main extends Worker {
             //summarize params
             L.info(String.format("Starting validation with %s", this.bestFileName));
             //start iterations
-            this.performEvolution(this.prepareListenerFactory(), new ValidationFactory(1.0, Map.of(new AddNodeMutation(this.parameterSupplier), 0.15, new AddEdgeMutation(this.parameterSupplier, 1.0), 0.15, new MutateEdge(0.7, 0.0), 0.7), ValidationBuilder.buildValidation("fixed", "growing", this.getDonator(), this.getReceiver(), this.morph.getBody(), this.seed), basicFactory));
+            this.performEvolution(this.prepareListenerFactory(), new ValidationFactory(1.0, Map.of(new AddNodeMutation(this.parameterSupplier), 0.15, new AddEdgeMutation(this.parameterSupplier, 1.0), 0.15, new MutateEdge(0.7, 0.0), 0.7),
+                    ValidationBuilder.buildValidation("fixed", "rewiring", this.getDonator(), this.getReceiver(), this.morph.getBody(), this.seed), basicFactory));
         }
     }
 
@@ -201,7 +202,7 @@ public class Main extends Worker {
                 //build evolver
                 RobotMapper mapper = new RobotMapper(this.morph.getBody());
                 Evolver<MyController, Robot<?>, Outcome> evolver = new StandardEvolver<>(mapper, genotypeFactory, PartialComparator.from(Double.class).reversed().comparing(i -> i.getFitness().getVelocity()),
-                        this.popSize, Map.of(new AddNodeMutation(parameterSupplier), 0.1, new AddEdgeMutation(parameterSupplier, 1.0), 0.1, new MutateEdge(0.35, 0.0), 0.3),// new CrossoverWithDonation("growing"), 0.5),// new MutateNode(), 0.25),
+                        this.popSize, Map.of(new AddNodeMutation(this.parameterSupplier), 0.1, new AddEdgeMutation(this.parameterSupplier, 1.0), 0.1, new MutateEdge(0.7, 0.0), 0.7, new CrossoverWithDonation("growing"), 0.1),// new MutateNode(), 0.25),
                         new Tournament(5), new Worst(), this.popSize, true, true);
                 Listener<Event<?, ? extends Robot<?>, ? extends Outcome>> listener = Listener.all(List.of(listenerFactory.build()));
                 //optimize

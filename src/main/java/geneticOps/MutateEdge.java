@@ -8,8 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-// when evolving also activation, better to perturb one edge at a time. If not, better to
-// perturb all edges together
+
 public class MutateEdge implements Mutation<MyController> {
 
     private final GaussianMutation mutation;
