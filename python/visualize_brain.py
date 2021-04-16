@@ -151,7 +151,7 @@ def main(input_file, output_file):
     drawer.plot_rectangles()
     nodes_positions = drawer.plot_nodes(nodes, font, func_to_color, voxel_to_num_sensors)
     drawer.plot_edges(edges, nodes_positions, nodes)
-    #os.remove(input_file)
+    os.remove(input_file)
     drawer.save_image(output_file)
 
 

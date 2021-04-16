@@ -13,9 +13,15 @@ import java.util.stream.Collectors;
 public class AddNodeMutation implements Mutation<MyController> {
 
     private final Supplier<Double> parameterSupplier;
+    private final double perc;
+
+    public AddNodeMutation(Supplier<Double> sup, double p) {
+        this.parameterSupplier = sup;
+        this.perc = p;
+    }
 
     public AddNodeMutation(Supplier<Double> sup) {
-        parameterSupplier = sup;
+        this(sup, 1.0);
     }
 
     @Override
@@ -23,17 +29,24 @@ public class AddNodeMutation implements Mutation<MyController> {
         Pair<Integer, Integer> pair = parent.getValidCoordinates()[random.nextInt(parent.getValidCoordinates().length)];
         int sampleX = pair.getFirst();
         int sampleY = pair.getSecond();
-        //MultiLayerPerceptron.ActivationFunction a = MultiLayerPerceptron.ActivationFunction.values()[random.nextInt(MultiLayerPerceptron.ActivationFunction.values().length)];
         MyController newBorn = new MyController(parent);
         //List<MyController.Edge> edges = newBorn.getEdgeSet();
         //MyController.Edge edge = edges.get(random.nextInt(edges.size()));
         //newBorn.splitEdge(edge, this.parameterSupplier, random);
-        Map<Integer, MyController.Neuron> candidates = newBorn.getNodeMap().entrySet().stream().filter(n -> MyController.euclideanDistance(sampleX, sampleY, n.getValue().getX(), n.getValue().getY()) <= 1.0)
+        if (random.nextDouble() <= this.perc) {
+            this.enableMutation(newBorn, sampleX, sampleY, random);
+        }
+        else {
+            this.disableMutation(newBorn, random);
+        }
+        return newBorn;
+    }
+
+    private void enableMutation(MyController controller, int sampleX, int sampleY, Random random) {
+        Map<Integer, MyController.Neuron> candidates = controller.getNodeMap().entrySet().stream().filter(n -> MyController.euclideanDistance(sampleX, sampleY, n.getValue().getX(), n.getValue().getY()) <= 1.0)
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         Pair<MyController.Neuron, MyController.Neuron> trial = this.pickPair(candidates, random);
-        // TODO: is it really necessary to avoid actuators as sources and sensors as targets?
-        newBorn.addHiddenNode(trial.getFirst().getIndex(), trial.getSecond().getIndex(), MultiLayerPerceptron.ActivationFunction.SIGMOID, sampleX, sampleY, this.parameterSupplier);
-        return newBorn;
+        controller.addHiddenNode(trial.getFirst().getIndex(), trial.getSecond().getIndex(), MultiLayerPerceptron.ActivationFunction.SIGMOID, sampleX, sampleY, this.parameterSupplier);
     }
 
     private Pair<MyController.Neuron, MyController.Neuron> pickPair(Map<Integer, MyController.Neuron> candidates, Random random) {
@@ -42,6 +55,15 @@ public class AddNodeMutation implements Mutation<MyController> {
         MyController.Neuron source = candidates.get(indexes.stream().filter(i -> !candidates.get(i).isActuator()).findFirst().get());
         MyController.Neuron dest = candidates.get(indexes.stream().filter(i -> !candidates.get(i).isSensing()).findFirst().get());
         return new Pair<>(source, dest);
+    }
+
+    private void disableMutation(MyController controller, Random random) {
+        List<MyController.Neuron> candidates = controller.getNodeSet().stream().filter(MyController.Neuron::isHidden).collect(Collectors.toList());
+        if (candidates.isEmpty()) {
+            return;
+        }
+        MyController.Neuron candidate = candidates.get(random.nextInt(candidates.size()));
+        controller.removeNeuron(candidate);
     }
 
 }

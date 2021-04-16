@@ -32,10 +32,10 @@ public class MutateEdge implements Mutation<MyController> {
     }
 
     private void perturbParameters(MyController controller, Random random) {
-        controller.getNodeSet().forEach(n -> n.getIngoingEdges().forEach(e -> e.perturbParams(this.mutation.mutate(this.extractParams(e), random))));
-        //List<MyController.Edge> edges = controller.getEdgeSet();
-        //MyController.Edge candidate = edges.get(random.nextInt(edges.size()));
-        //candidate.perturbParams(mutation.mutate(this.extractParams(candidate), random));
+        //controller.getNodeSet().forEach(n -> n.getIngoingEdges().forEach(e -> e.perturbParams(this.mutation.mutate(this.extractParams(e), random))));
+        List<MyController.Edge> edges = controller.getEdgeSet();
+        MyController.Edge candidate = edges.get(random.nextInt(edges.size()));
+        candidate.perturbParams(mutation.mutate(this.extractParams(candidate), random));
     }
 
     private void perturbDelay(MyController controller, Random random) {

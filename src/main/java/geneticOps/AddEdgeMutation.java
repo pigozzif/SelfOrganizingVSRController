@@ -18,24 +18,27 @@ public class AddEdgeMutation implements Mutation<MyController> {
         this.perc = p;
     }
 
+    public AddEdgeMutation(Supplier<Double> s) {
+        this(s, 1.0);
+    }
+
     @Override
     public MyController mutate(MyController parent, Random random) {
         MyController newBorn = new MyController(parent);
         if (random.nextDouble() <= this.perc) {
-            this.addMutation(newBorn, random);
+            this.enableMutation(newBorn, random);
         }
         else {
-            this.enableAndDisableMutation(newBorn, random);
+            this.disableMutation(newBorn, random);
         }
         return newBorn;
     }
-    // TODO: we now outlaw multiedges, but this couls make sense with delay
-    private void addMutation(MyController controller, Random random) {
+
+    private void enableMutation(MyController controller, Random random) {
         Map<Integer, MyController.Neuron> nodes = controller.getNodeMap();
         List<Integer> indexes = new ArrayList<>(nodes.keySet());
         Collections.shuffle(indexes, random);
         Pair<Integer, Integer> candidates = this.pickPair(nodes, random);
-        // TODO: for the moment, we don't allow outgoing edges from actuators
         controller.addEdge(candidates.getFirst(), candidates.getSecond(), this.parameterSupplier.get(), this.parameterSupplier.get());
     }
 
@@ -52,11 +55,11 @@ public class AddEdgeMutation implements Mutation<MyController> {
         } while (candidate.isEmpty());
         return new Pair<>(source.getIndex(), candidate.get());
     }
-    // TODO: might be the source of incorrect results for tests, still to verify
-    private void enableAndDisableMutation(MyController controller, Random random) {
+
+    private void disableMutation(MyController controller, Random random) {
         List<MyController.Edge> edges = controller.getEdgeSet();
         MyController.Edge candidate = edges.get(random.nextInt(edges.size()));
-        candidate.perturbAbility();
+        controller.removeEdge(candidate);
     }
 
 }
