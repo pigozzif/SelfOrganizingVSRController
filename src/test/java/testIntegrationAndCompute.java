@@ -1,9 +1,10 @@
 
-import buildingBlocks.ControllerFactory;
+import buildingBlocks.factories.ControllerFactory;
 import buildingBlocks.MyController;
 import geneticOps.*;
 import it.units.erallab.hmsrobots.core.objects.SensingVoxel;
 import it.units.erallab.hmsrobots.util.Grid;
+import morphologies.Morphology;
 import morphologies.WormMorphology;
 import it.units.erallab.hmsrobots.core.objects.Robot;
 import it.units.erallab.hmsrobots.tasks.locomotion.Locomotion;
@@ -22,11 +23,13 @@ public class testIntegrationAndCompute {
     private static final Random random = new Random(0);
 
     private static MyController getDefaultController() {
-        return new ControllerFactory(random::nextDouble, 1.0, new WormMorphology(5, 1, "vel-area-touch")).build(random);
+        Morphology morph = new WormMorphology(5, 1, "vel-area-touch");
+        return new ControllerFactory(random::nextDouble, 1.0, morph.getBody(), morph.getNumSensors()).build(random);
     }
 
     private static MyController getIdentityController() {
-        return new ControllerFactory(() -> 1.0, 1.0, new WormMorphology(5, 1, "const")).build(random);
+        Morphology morph = new WormMorphology(5, 1, "const");
+        return new ControllerFactory(() -> 1.0, 1.0, morph.getBody(), morph.getNumSensors()).build(random);
     }
 
     @Test(expected=Test.None.class /* no exception expected */)

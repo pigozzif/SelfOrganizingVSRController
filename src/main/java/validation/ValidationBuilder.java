@@ -18,11 +18,36 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Random;
 
-// TODO: look up builder pattern
+
 public class ValidationBuilder {
 
-    // TODO: quite a lot of variables to extract; consider switching to an abstract class
-    public static Controller<?>  parseIndividualFromFile(String fileName, Random random) {
+    private final String serializationColumn;
+    private final String transformation;
+    private final Cutter cutter;
+    private final Assembler assembler;
+
+    public ValidationBuilder(String serialized, String transf, String cuttingStrategy, String assemblyStrategy) {
+        this.serializationColumn = serialized;
+        this.transformation = transf;
+        this.cutter = Cutter.createCutter(cuttingStrategy);
+        this.assembler = Assembler.createAssembler(assemblyStrategy);
+    }
+
+    public ValidationBuilder(String cuttingStrategy, String assemblyStrategy) {
+        this("best→solution→serialized", "identity", cuttingStrategy, assemblyStrategy);
+    }
+
+    public MyController buildValidation(String file1, String file2, Grid<? extends SensingVoxel> body, Random random) {
+        MyController controller1 = (MyController) parseIndividualFromFile(file1, random);
+        //writeBrainToFile(controller1, "receiver.txt", "./src/main/java/validation/test/receiver.png");
+        MyController controller2 = (MyController) parseIndividualFromFile(file2, random);
+        //writeBrainToFile(controller2, "donator.txt", "./src/main/java/validation/test/donator.png");
+        MyController output = this.assembler.assemble(controller1, controller2, this.cutter.cut(body), random);
+        //writeBrainToFile(output, "child.txt", "./src/main/java/validation/test/child.png");
+        return output;
+    }
+
+    public Controller<?>  parseIndividualFromFile(String fileName, Random random) {
         List<CSVRecord> records;
         List<String> headers;
         try {
@@ -34,23 +59,12 @@ public class ValidationBuilder {
         } catch (IOException e) {
             throw new RuntimeException(String.format("Cannot read file: %s", fileName));
         }
-        if (!headers.contains("best→solution→serialized")) {
+        if (!headers.contains(this.serializationColumn)) {
             throw new RuntimeException(String.format("input file %s does not contain serialization column", fileName));
         }
         SerializationUtils.Mode mode = SerializationUtils.Mode.valueOf(SerializationUtils.Mode.GZIPPED_JSON.name().toUpperCase());
-        return RobotUtils.buildRobotTransformation("identity", random)
-                .apply(SerializationUtils.deserialize(records.get(records.size() -1).get("best→solution→serialized"), Robot.class, mode)).getController();
-    }
-
-    public static MyController buildValidation(String cuttingStrategy, String assemblingStrategy, String file1, String file2,
-                                               Grid<? extends SensingVoxel> body, Random random) {
-        MyController controller1 = (MyController) parseIndividualFromFile(file1, random);
-        writeBrainToFile(controller1, "receiver.txt", "./src/main/java/validation/test/receiver.png");
-        MyController controller2 = (MyController) parseIndividualFromFile(file2, random);
-        writeBrainToFile(controller2, "donator.txt", "./src/main/java/validation/test/donator.png");
-        MyController output = Assembler.createAssembler(assemblingStrategy).assemble(controller1, controller2, Cutter.createCutter(cuttingStrategy).cut(body), random);
-        writeBrainToFile(output, "child.txt", "./src/main/java/validation/test/child.png");
-        return output;
+        return RobotUtils.buildRobotTransformation(this.transformation, random)
+                .apply(SerializationUtils.deserialize(records.get(records.size() -1).get(this.serializationColumn), Robot.class, mode)).getController();
     }
 
     private static void writeBrainToFile(MyController controller, String inputName, String outputName) {

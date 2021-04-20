@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import buildingBlocks.ControllerFactory;
+import buildingBlocks.factories.ControllerFactory;
 import buildingBlocks.MyController;
 import buildingBlocks.RobotMapper;
-import buildingBlocks.ValidationFactory;
+import buildingBlocks.factories.ValidationFactory;
 import com.google.common.base.Stopwatch;
 import geneticOps.*;
 import it.units.erallab.hmsrobots.core.objects.Robot;
@@ -26,6 +26,7 @@ import it.units.erallab.hmsrobots.tasks.locomotion.Outcome;
 import it.units.erallab.hmsrobots.util.RobotUtils;
 import it.units.malelab.jgea.Worker;
 import it.units.malelab.jgea.core.Factory;
+import it.units.malelab.jgea.core.Individual;
 import it.units.malelab.jgea.core.evolver.Event;
 import it.units.malelab.jgea.core.evolver.Evolver;
 import it.units.malelab.jgea.core.evolver.StandardEvolver;
@@ -37,7 +38,7 @@ import it.units.malelab.jgea.core.selector.Worst;
 import it.units.malelab.jgea.core.util.*;
 import morphologies.Morphology;
 import org.dyn4j.dynamics.Settings;
-import validation.ValidationBuilder;
+import validation.*;
 
 import java.io.File;
 import java.util.*;
@@ -71,7 +72,7 @@ public class Main extends Worker {
     public static final int CACHE_SIZE = 0;
     public static final String SEQUENCE_SEPARATOR_CHAR = ">";
     public static final String SEQUENCE_ITERATION_CHAR = ":";
-    private static final String dir = "./output/one_edge_0.7/";
+    private static final String dir = "./output/";
     private double episodeTime;
     private double episodeTransientTime;
     private double validationEpisodeTime;
@@ -103,7 +104,7 @@ public class Main extends Worker {
     @Override
     public void run() {
         this.parseArguments();
-        Factory<MyController> basicFactory = new ControllerFactory(this.parameterSupplier, this.initPerc, this.morph);
+        Factory<MyController> basicFactory = new ControllerFactory(this.parameterSupplier, this.initPerc, this.morph.getBody(), this.morph.getNumSensors());
         if (!this.validationFlag) {
             //summarize params
             L.info(String.format("Starting evolution with %s", this.bestFileName));
@@ -114,8 +115,8 @@ public class Main extends Worker {
             //summarize params
             L.info(String.format("Starting validation with %s", this.bestFileName));
             //start iterations
-            this.performEvolution(this.prepareListenerFactory(), new ValidationFactory(1.0, Map.of(new AddNodeMutation(this.parameterSupplier), 0.15, new AddEdgeMutation(this.parameterSupplier, 1.0), 0.15, new MutateEdge(0.7, 0.0), 0.7),
-                    ValidationBuilder.buildValidation("fixed", "rewiring", this.getDonator(), this.getReceiver(), this.morph.getBody(), this.seed), basicFactory));
+            this.performEvolution(this.prepareListenerFactory(), new ValidationFactory(1.0, Map.of(new AddNodeMutation(this.parameterSupplier, 0.5), 0.15, new AddEdgeMutation(this.parameterSupplier, 0.5), 0.15, new MutateEdge(0.7, 0.0), 0.7),
+                    (new ValidationBuilder("fixed", "rewiring")).buildValidation(this.getDonator(), this.getReceiver(), this.morph.getBody(), this.seed), basicFactory));
         }
     }
 
@@ -155,6 +156,7 @@ public class Main extends Worker {
         //consumers
         List<NamedFunction<Event<?, ? extends Robot<?>, ? extends Outcome>, ?>> basicFunctions = Utils.basicFunctions();
         List<NamedFunction<Event<?, ? extends Robot<?>, ? extends Outcome>, ?>> populationFunctions = Utils.populationFunctions(fitnessFunction);
+        List<NamedFunction<Individual<?, ? extends Robot<?>, ? extends Outcome>, ?>> individualFunctions = Utils.individualFunctions(fitnessFunction);
         List<NamedFunction<Outcome, ?>> basicOutcomeFunctions = Utils.basicOutcomeFunctions();
         Listener.Factory<Event<?, ? extends Robot<?>, ? extends Outcome>> factory = Listener.Factory.deaf();
         //screen listener
@@ -163,6 +165,7 @@ public class Main extends Worker {
             factory = factory.and(new CSVPrinter<>(Misc.concat(List.of(
                     basicFunctions,
                     populationFunctions,
+                    NamedFunction.then(best(), individualFunctions),
                     NamedFunction.then(as(Outcome.class).of(fitness()).of(best()), basicOutcomeFunctions),
                     NamedFunction.then(best(), Utils.serializationFunction(true))
             )), new File(this.bestFileName)
@@ -195,10 +198,8 @@ public class Main extends Worker {
 
     private void performEvolution(Listener.Factory<Event<?, ? extends Robot<?>, ? extends Outcome>> listenerFactory,
                                   Factory<MyController> genotypeFactory) {
-        int counter = 0;
         for (String terrainName : this.terrainNames) {
             for (String transformationName : this.transformationNames) {
-                counter = counter + 1;
                 //build evolver
                 RobotMapper mapper = new RobotMapper(this.morph.getBody());
                 Evolver<MyController, Robot<?>, Outcome> evolver = new StandardEvolver<>(mapper, genotypeFactory, PartialComparator.from(Double.class).reversed().comparing(i -> i.getFitness().getVelocity()),

@@ -42,8 +42,8 @@ public class Morphology {
     }
 
     protected final Grid<? extends SensingVoxel> body;
-    protected final int[] sensors;  // TODO: array?
-    protected final List<Pair> allowedMorph;  // TODO: array?
+    protected final int[] sensors;
+    protected final List<Pair> allowedMorph;
 
     public Morphology(int w, int h, String shape, String sensorConfig) {
         Grid<Boolean> booleanGrid = RobotUtils.buildShape(shape);

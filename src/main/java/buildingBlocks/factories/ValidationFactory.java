@@ -1,5 +1,6 @@
-package buildingBlocks;
+package buildingBlocks.factories;
 
+import buildingBlocks.MyController;
 import it.units.malelab.jgea.core.Factory;
 import it.units.malelab.jgea.core.operator.GeneticOperator;
 import it.units.malelab.jgea.core.util.Misc;

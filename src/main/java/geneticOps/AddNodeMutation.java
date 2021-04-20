@@ -14,6 +14,7 @@ public class AddNodeMutation implements Mutation<MyController> {
 
     private final Supplier<Double> parameterSupplier;
     private final double perc;
+    private static final double MAX_DIST = 1.0;
 
     public AddNodeMutation(Supplier<Double> sup, double p) {
         this.parameterSupplier = sup;
@@ -43,18 +44,18 @@ public class AddNodeMutation implements Mutation<MyController> {
     }
 
     private void enableMutation(MyController controller, int sampleX, int sampleY, Random random) {
-        Map<Integer, MyController.Neuron> candidates = controller.getNodeMap().entrySet().stream().filter(n -> MyController.euclideanDistance(sampleX, sampleY, n.getValue().getX(), n.getValue().getY()) <= 1.0)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        List<MyController.Neuron> candidates = controller.getNodeSet().stream().filter(n -> MyController.euclideanDistance(sampleX, sampleY, n.getX(), n.getY()) <= MAX_DIST)
+                .collect(Collectors.toList());
         Pair<MyController.Neuron, MyController.Neuron> trial = this.pickPair(candidates, random);
         controller.addHiddenNode(trial.getFirst().getIndex(), trial.getSecond().getIndex(), MultiLayerPerceptron.ActivationFunction.SIGMOID, sampleX, sampleY, this.parameterSupplier);
     }
 
-    private Pair<MyController.Neuron, MyController.Neuron> pickPair(Map<Integer, MyController.Neuron> candidates, Random random) {
-        List<Integer> indexes = new ArrayList<>(candidates.keySet());
-        Collections.shuffle(indexes, random);
-        MyController.Neuron source = candidates.get(indexes.stream().filter(i -> !candidates.get(i).isActuator()).findFirst().get());
-        MyController.Neuron dest = candidates.get(indexes.stream().filter(i -> !candidates.get(i).isSensing()).findFirst().get());
-        return new Pair<>(source, dest);
+    private Pair<MyController.Neuron, MyController.Neuron> pickPair(List<MyController.Neuron> candidates, Random random) {
+        List<MyController.Neuron> sourceCandidates = candidates.stream().filter(n -> !n.isActuator()).collect(Collectors.toList());
+        List<MyController.Neuron> targetCandidates = candidates.stream().filter(n -> !n.isSensing()).collect(Collectors.toList());
+        MyController.Neuron source = sourceCandidates.get(random.nextInt(sourceCandidates.size()));
+        MyController.Neuron target = targetCandidates.get(random.nextInt(targetCandidates.size()));
+        return new Pair<>(source, target);
     }
 
     private void disableMutation(MyController controller, Random random) {

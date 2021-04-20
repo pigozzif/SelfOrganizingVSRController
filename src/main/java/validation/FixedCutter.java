@@ -8,7 +8,7 @@ public class FixedCutter implements Cutter {
 
     @Override
     public Grid<Boolean> cut(Grid<? extends SensingVoxel> body) {
-        return Grid.create(body.getW(), body.getH(), (x, y) -> (x == 0 && y == 0) || (x == 0 && y == 1));
+        return Grid.create(body.getW(), body.getH(), (x, y) -> x <= 2);
     }
 
 }

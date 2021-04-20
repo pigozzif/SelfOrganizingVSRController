@@ -12,6 +12,7 @@ public class AddEdgeMutation implements Mutation<MyController> {
 
     private final Supplier<Double> parameterSupplier;
     private final double perc;
+    private static final double MAX_DIST = 1.0;
 
     public AddEdgeMutation(Supplier<Double> s, double p) {
         this.parameterSupplier = s;
@@ -35,25 +36,19 @@ public class AddEdgeMutation implements Mutation<MyController> {
     }
 
     private void enableMutation(MyController controller, Random random) {
-        Map<Integer, MyController.Neuron> nodes = controller.getNodeMap();
-        List<Integer> indexes = new ArrayList<>(nodes.keySet());
-        Collections.shuffle(indexes, random);
-        Pair<Integer, Integer> candidates = this.pickPair(nodes, random);
-        controller.addEdge(candidates.getFirst(), candidates.getSecond(), this.parameterSupplier.get(), this.parameterSupplier.get());
-    }
-
-    private Pair<Integer, Integer> pickPair(Map<Integer, MyController.Neuron> nodes, Random random) {
-        Optional<Integer> candidate;
-        MyController.Neuron source;
-        do {
-            List<Integer> indexes = new ArrayList<>(nodes.keySet());
-            Collections.shuffle(indexes, random);
-            source = nodes.get(indexes.stream().filter(i -> !nodes.get(i).isActuator()).findFirst().get());
-            MyController.Neuron finalSource = source;
-            candidate = indexes.stream().filter(i -> nodes.get(i).getIndex() != finalSource.getIndex() &&
-                    MyController.euclideanDistance(finalSource, nodes.get(i)) <= 1.0 && !nodes.get(i).isSensing() && !nodes.get(i).hasInNeighbour(finalSource)).findFirst();
-        } while (candidate.isEmpty());
-        return new Pair<>(source.getIndex(), candidate.get());
+        List<Pair<Integer, Integer>> nodes = new LinkedList<>();
+        for (MyController.Neuron n1 : controller.getNodeSet()) {
+            for (MyController.Neuron n2 : controller.getNodeSet()) {
+                if (!n2.isSensing() && !n1.isActuator() && MyController.euclideanDistance(n1, n2) <= MAX_DIST && !n2.hasInNeighbour(n1) && n1.getIndex() != n2.getIndex()) {
+                    nodes.add(new Pair<>(n1.getIndex(), n2.getIndex()));
+                }
+            }
+        }
+        if (nodes.isEmpty()) {
+            return;
+        }
+        Pair<Integer, Integer> chosenOne = nodes.get(random.nextInt(nodes.size()));
+        controller.addEdge(chosenOne.getFirst(), chosenOne.getSecond(), this.parameterSupplier.get(), this.parameterSupplier.get());
     }
 
     private void disableMutation(MyController controller, Random random) {

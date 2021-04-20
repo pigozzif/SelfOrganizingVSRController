@@ -1,7 +1,8 @@
-import buildingBlocks.ControllerFactory;
+import buildingBlocks.factories.ControllerFactory;
 import buildingBlocks.MyController;
 import geneticOps.*;
 import it.units.erallab.hmsrobots.core.controllers.MultiLayerPerceptron;
+import morphologies.Morphology;
 import morphologies.WormMorphology;
 import org.junit.Test;
 
@@ -17,11 +18,13 @@ public class testGeneticOperationsAndInit {
     private static final Random random = new Random(0);
 
     private static MyController getDefaultController() {
-        return new ControllerFactory(random::nextDouble, 1.0, new WormMorphology(5, 1, "vel-area-touch")).build(random);
+        Morphology morph = new WormMorphology(5, 1, "vel-area-touch");
+        return new ControllerFactory(random::nextDouble, 1.0, morph.getBody(), morph.getNumSensors()).build(random);
     }
 
     private static MyController getIdentityController(double fixedParam) {
-        return new ControllerFactory(() -> fixedParam, 1.0, new WormMorphology(5, 1, "vel-area-touch")).build(random);
+        Morphology morph = new WormMorphology(5, 1, "vel-area-touch");
+        return new ControllerFactory(() -> fixedParam, 1.0, morph.getBody(), morph.getNumSensors()).build(random);
     }
 
     @Test

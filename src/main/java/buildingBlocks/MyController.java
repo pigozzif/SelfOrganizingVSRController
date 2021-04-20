@@ -5,6 +5,7 @@ import it.units.erallab.hmsrobots.core.controllers.Controller;
 import it.units.erallab.hmsrobots.core.controllers.MultiLayerPerceptron;
 import it.units.erallab.hmsrobots.core.objects.SensingVoxel;
 import it.units.erallab.hmsrobots.util.Grid;
+import it.units.malelab.jgea.core.util.Sized;
 import org.apache.commons.math3.util.Pair;
 
 import java.io.Serializable;
@@ -14,7 +15,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 
-public class MyController implements Controller<SensingVoxel> {
+public class MyController implements Controller<SensingVoxel>, Sized {
     // TODO: implement toString()
     // TODO: maybe better representation would be to also have a list of edges, and nodes have a list of edge indexes, but too much for the moment
     public static class Edge implements Serializable {
@@ -23,14 +24,15 @@ public class MyController implements Controller<SensingVoxel> {
         @JsonProperty
         private double bias;
         @JsonProperty
-        private int source; // TODO: might cause issues with deserialization
+        private int source;
         @JsonProperty
         private int target;
         @JsonProperty
         private int delay;
         @JsonProperty
-        public static int MAX_DELAY = 0;
         private boolean enabled;
+        @JsonProperty
+        public static int MAX_DELAY = 0;
         private final int index;
 
         @JsonCreator
@@ -44,8 +46,8 @@ public class MyController implements Controller<SensingVoxel> {
             source = s;
             target = t;
             delay = d;
-            enabled = true;
             index = computeIndex(s, t);
+            enabled = true;
         }
 
         public Edge(Edge other) {
@@ -70,10 +72,6 @@ public class MyController implements Controller<SensingVoxel> {
         public int getTarget() { return target; }
 
         public void setTarget(int newTarget) { target = newTarget; }
-
-        public boolean isEnabled() { return enabled; }
-
-        public void perturbAbility() { enabled = !enabled; }
 
         public int getIndex() { return index; }
 
@@ -128,7 +126,6 @@ public class MyController implements Controller<SensingVoxel> {
 
         public Neuron(Neuron other) {
             this(other.index, other.function, other.x, other.y);
-            other.getIngoingEdges().forEach(e -> ingoingEdges.add(new Edge(e)));
             this.resetState();
         }
         // TODO: call it forward?
@@ -222,7 +219,7 @@ public class MyController implements Controller<SensingVoxel> {
         @Override
         public void compute(Grid<? extends SensingVoxel> voxels, MyController controller) {
             SensingVoxel voxel = voxels.get(x, y);
-            message = function.apply(ingoingEdges.stream().filter(Edge::isEnabled).mapToDouble(e -> this.propagate(e, controller)).sum());
+            message = function.apply(ingoingEdges.stream().mapToDouble(e -> this.propagate(e, controller)).sum());
             voxel.applyForce(message);
         }
 
@@ -285,7 +282,7 @@ public class MyController implements Controller<SensingVoxel> {
 
         @Override
         public void compute(Grid<? extends SensingVoxel> voxels, MyController controller) {
-            message = function.apply(ingoingEdges.stream().filter(Edge::isEnabled).mapToDouble(e -> this.propagate(e, controller)).sum());
+            message = function.apply(ingoingEdges.stream().mapToDouble(e -> this.propagate(e, controller)).sum());
         }
 
         @Override
@@ -324,13 +321,8 @@ public class MyController implements Controller<SensingVoxel> {
     // TODO: would be nice to have Set or Collection
     public List<Edge> getEdgeSet() { return this.nodes.values().stream().flatMap(n -> n.getIngoingEdges().stream()).collect(Collectors.toList()); }
 
-    public boolean hasNeuron(int idx) { return this.nodes.containsKey(idx); }
-
-    public boolean hasEdge(int idx) { return this.getEdgeSet().stream().mapToInt(Edge::getIndex).anyMatch(i -> i == idx); }
-
     public void addEdge(int source, int dest, double weight, double bias) {
         Edge edge = new Edge(weight, bias, source, dest, 0);
-        // (1538, 40097), (1378, 45057)
         this.nodes.get(dest).addIngoingEdge(edge);
     }
 
@@ -482,6 +474,11 @@ public class MyController implements Controller<SensingVoxel> {
     @Override
     public void reset() {
         this.getNodeSet().forEach(Neuron::resetState);
+    }
+
+    @Override
+    public int size() {
+        return this.getNodeSet().size() + this.getEdgeSet().size();
     }
 
 }

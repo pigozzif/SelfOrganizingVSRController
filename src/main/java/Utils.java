@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
+import buildingBlocks.MyController;
+import it.units.erallab.hmsrobots.core.controllers.Controller;
 import it.units.erallab.hmsrobots.core.objects.Robot;
+import it.units.erallab.hmsrobots.core.objects.SensingVoxel;
 import it.units.erallab.hmsrobots.tasks.locomotion.Locomotion;
 import it.units.erallab.hmsrobots.tasks.locomotion.Outcome;
 import it.units.erallab.hmsrobots.util.Grid;
@@ -84,7 +87,13 @@ public class Utils {
     public static List<NamedFunction<Individual<?, ? extends Robot<?>, ? extends Outcome>, ?>> individualFunctions(Function<Outcome, Double> fitnessFunction) {
         NamedFunction<Individual<?, ? extends Robot<?>, ? extends Outcome>, ?> size = size().of(genotype());
         return List.of(
-                f("w", "%2d", (Function<Grid<?>, Number>) Grid::getW)
+                f("neurons", "%5d", (Function<Controller<?>, Number>) x -> ((MyController) x).getNodeSet().size())
+                        .of(f("brain", (Function<Robot<?>, Controller<?>>) Robot::getController))
+                        .of(solution()),
+                f("edges", "5%d", (Function<Controller<?>, Number>) x -> ((MyController) x).getEdgeSet().size())
+                        .of(f("brain", (Function<Robot<?>, Controller<?>>) Robot::getController))
+                        .of(solution()),
+                /*f("w", "%2d", (Function<Grid<?>, Number>) Grid::getW)
                         .of(f("shape", (Function<Robot<?>, Grid<?>>) Robot::getVoxels))
                         .of(solution()),
                 f("h", "%2d", (Function<Grid<?>, Number>) Grid::getH)
@@ -92,10 +101,10 @@ public class Utils {
                         .of(solution()),
                 f("num.voxel", "%2d", (Function<Grid<?>, Number>) g -> g.count(Objects::nonNull))
                         .of(f("shape", (Function<Robot<?>, Grid<?>>) Robot::getVoxels))
-                        .of(solution()),
-                size.reformat("%5d"),
-                genotypeBirthIteration(),
-                f("fitness", "%5.1f", fitnessFunction).of(fitness())
+                        .of(solution()),*/
+                size.reformat("%5d")//,
+                //genotypeBirthIteration(),
+                //f("fitness", "%5.1f", fitnessFunction).of(fitness())
         );
     }
 

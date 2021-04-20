@@ -2,35 +2,27 @@ package validation;
 
 import buildingBlocks.MyController;
 import it.units.erallab.hmsrobots.util.Grid;
-import org.apache.commons.math3.util.Pair;
 
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-// TODO: decide whether reinitialize rewired weights or keep them
+
 public class RewiringAssembler implements Assembler {
-    // TODO: a little bit big this class
+
     private static class CrossingEdge {
 
-        public final boolean isSourceSensing;
-        public final boolean isSourceActuator;
-        public final boolean isTargetSensing;
-        public final boolean isTargetActuator;
-        public final Pair<Integer, Integer> sourceLoc;
-        public final Pair<Integer, Integer> targetLoc;
-        private final double weight;
-        private final double bias;
+        public final MyController.Edge edge;
+        public final MyController.Neuron source;
+        public final MyController.Neuron target;
+        public final boolean isFromDonator;
 
-        public CrossingEdge(boolean ssen, boolean sact, boolean tsen, boolean tact, int sx, int sy, int tx, int ty, double w, double b) {
-            this.isSourceSensing = ssen;
-            this.isSourceActuator = sact;
-            this.isTargetSensing = tsen;
-            this.isTargetActuator = tact;
-            this.sourceLoc = new Pair<>(sx, sy);
-            this.targetLoc = new Pair<>(tx, ty);
-            this.weight = w;
-            this.bias = b;
+        public CrossingEdge(MyController.Edge e, MyController.Neuron n1, MyController.Neuron n2, boolean donator) {
+            this.edge = e;
+            this.source = n1;
+            this.target = n2;
+            this.isFromDonator = donator;
         }
 
     }
@@ -38,10 +30,16 @@ public class RewiringAssembler implements Assembler {
     private final Map<Integer, MyController.Neuron> visitedNeurons;
     private Grid<Boolean> cuttingGrid;
     private final List<CrossingEdge> crossingEdges;
+    private final Supplier<Double> parameterSupplier;
 
-    public RewiringAssembler() {
+    public RewiringAssembler(Supplier<Double> supplier) {
         this.visitedNeurons = new HashMap<>();
         this.crossingEdges = new ArrayList<>();
+        this.parameterSupplier = supplier;
+    }
+
+    public RewiringAssembler() {
+        this(null);
     }
 
     @Override
@@ -68,8 +66,7 @@ public class RewiringAssembler implements Assembler {
             else if (whatAboutSource || whatAboutTarget) {
                 MyController.Neuron source = receiver.getNodeMap().get(edge.getSource());
                 MyController.Neuron target = receiver.getNodeMap().get(edge.getTarget());
-                this.crossingEdges.add(new CrossingEdge(source.isSensing(), source.isActuator(), target.isSensing(), target.isActuator(),
-                        source.getX(), source.getY(), target.getX(), target.getY(), edge.getParams()[0], edge.getParams()[1]));
+                this.crossingEdges.add(new CrossingEdge(edge, source, target, false));
             }
         }
         for (MyController.Neuron neuron : this.visitedNeurons.values()) {
@@ -101,26 +98,39 @@ public class RewiringAssembler implements Assembler {
             else if (whatAboutSource || whatAboutTarget) {
                 MyController.Neuron source = donator.getNodeMap().get(edge.getSource());
                 MyController.Neuron target = donator.getNodeMap().get(edge.getTarget());
-                this.crossingEdges.add(new CrossingEdge(source.isSensing(), source.isActuator(), target.isSensing(), target.isActuator(),
-                        source.getX(), source.getY(), target.getX(), target.getY(), edge.getParams()[0], edge.getParams()[1]));
+                this.crossingEdges.add(new CrossingEdge(edge, source, target, true));
             }
         }
         this.visitedNeurons.clear();
     }
 
     private void reWire(MyController hybrid, Random random) {
-        for (CrossingEdge edge : this.crossingEdges) {
-            List<MyController.Neuron> sourceCandidates = hybrid.getNodeSet().stream().filter(n -> n.isSensing() == edge.isSourceSensing &&
-                    n.isActuator() == edge.isSourceActuator && n.getX() == edge.sourceLoc.getFirst() && n.getY() == edge.sourceLoc.getSecond()).collect(Collectors.toList());
-            List<MyController.Neuron> targetCandidates = hybrid.getNodeSet().stream().filter(n -> n.isSensing() == edge.isTargetSensing &&
-                    n.isActuator() == edge.isTargetActuator && n.getX() == edge.targetLoc.getFirst() && n.getY() == edge.targetLoc.getSecond()).collect(Collectors.toList());
+        for (CrossingEdge crossingEdge : this.crossingEdges) {
+            List<MyController.Neuron> sourceCandidates;
+            List<MyController.Neuron> targetCandidates;
+            if (crossingEdge.isFromDonator) {
+                sourceCandidates = List.of(crossingEdge.source);
+                targetCandidates = hybrid.getNodeSet().stream().filter(n -> n.isSensing() == crossingEdge.target.isSensing() &&
+                        n.isActuator() == crossingEdge.target.isActuator() && n.getX() == crossingEdge.target.getX() && n.getY() == crossingEdge.target.getY()).collect(Collectors.toList());
+            }
+            else {
+                sourceCandidates = hybrid.getNodeSet().stream().filter(n -> n.isSensing() == crossingEdge.source.isSensing() &&
+                        n.isActuator() == crossingEdge.source.isActuator() && n.getX() == crossingEdge.source.getX() && n.getY() == crossingEdge.source.getY()).collect(Collectors.toList());
+                targetCandidates = List.of(crossingEdge.target);
+            }
             if (sourceCandidates.isEmpty() || targetCandidates.isEmpty()) {
                 continue;
             }
             MyController.Neuron source = sourceCandidates.get(random.nextInt(sourceCandidates.size()));
             MyController.Neuron target = targetCandidates.get(random.nextInt(targetCandidates.size()));
-            hybrid.addEdge(source.getIndex(), target.getIndex(), edge.weight, edge.bias);
+            if (this.parameterSupplier == null) {
+                hybrid.addEdge(source.getIndex(), target.getIndex(), crossingEdge.edge.getParams()[0], crossingEdge.edge.getParams()[1]);
+            }
+            else {
+                hybrid.addEdge(source.getIndex(), target.getIndex(), this.parameterSupplier.get(), this.parameterSupplier.get());
+            }
         }
+        this.crossingEdges.clear();
     }
 
     private void visitFast(MyController controller, Predicate<MyController.Neuron> filterCondition) {
