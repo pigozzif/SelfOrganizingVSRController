@@ -2,7 +2,6 @@ package geneticOps;
 
 import buildingBlocks.MyController;
 import it.units.erallab.hmsrobots.core.controllers.MultiLayerPerceptron;
-import it.units.malelab.jgea.core.operator.Mutation;
 import org.apache.commons.math3.util.Pair;
 
 import java.util.*;
@@ -10,19 +9,20 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 
-public class AddNodeMutation implements Mutation<MyController> {
+public class AddNodeMutation implements TopologicalMutation {
 
     private final Supplier<Double> parameterSupplier;
     private final double perc;
-    private static final double MAX_DIST = 1.0;
+    private final double maxDist;
 
-    public AddNodeMutation(Supplier<Double> sup, double p) {
+    public AddNodeMutation(Supplier<Double> sup, double p, String dist) {
         this.parameterSupplier = sup;
         this.perc = p;
+        this.maxDist = TopologicalMutation.getMaxDist(dist);
     }
 
     public AddNodeMutation(Supplier<Double> sup) {
-        this(sup, 1.0);
+        this(sup, 1.0, "minimal");
     }
 
     @Override
@@ -44,7 +44,7 @@ public class AddNodeMutation implements Mutation<MyController> {
     }
 
     private void enableMutation(MyController controller, int sampleX, int sampleY, Random random) {
-        List<MyController.Neuron> candidates = controller.getNodeSet().stream().filter(n -> MyController.euclideanDistance(sampleX, sampleY, n.getX(), n.getY()) <= MAX_DIST)
+        List<MyController.Neuron> candidates = controller.getNodeSet().stream().filter(n -> MyController.euclideanDistance(sampleX, sampleY, n.getX(), n.getY()) <= this.maxDist)
                 .collect(Collectors.toList());
         Pair<MyController.Neuron, MyController.Neuron> trial = this.pickPair(candidates, random);
         controller.addHiddenNode(trial.getFirst().getIndex(), trial.getSecond().getIndex(), MultiLayerPerceptron.ActivationFunction.SIGMOID, sampleX, sampleY, this.parameterSupplier);

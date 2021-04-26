@@ -19,12 +19,12 @@ public class testGeneticOperationsAndInit {
 
     private static MyController getDefaultController() {
         Morphology morph = new WormMorphology(5, 1, "vel-area-touch");
-        return new ControllerFactory(random::nextDouble, 1.0, morph.getBody(), morph.getNumSensors()).build(random);
+        return new ControllerFactory(random::nextDouble, 1.0, morph.getBody(), morph.getNumSensors(), (x, y) -> x.getX() == y.getX() && x.getY() == y.getY()).build(random);
     }
 
     private static MyController getIdentityController(double fixedParam) {
         Morphology morph = new WormMorphology(5, 1, "vel-area-touch");
-        return new ControllerFactory(() -> fixedParam, 1.0, morph.getBody(), morph.getNumSensors()).build(random);
+        return new ControllerFactory(() -> fixedParam, 1.0, morph.getBody(), morph.getNumSensors(), (x, y) -> x.getX() == y.getX() && x.getY() == y.getY()).build(random);
     }
 
     @Test
@@ -84,7 +84,7 @@ public class testGeneticOperationsAndInit {
     @Test
     public void testAddEdgeMutation() {
         MyController controller = getDefaultController();
-        AddEdgeMutation mutation = new AddEdgeMutation(() -> 1.0, 1.0);
+        AddEdgeMutation mutation = new AddEdgeMutation(() -> 1.0);
         MyController mutant = mutation.mutate(controller, random);
         assertEquals(21, mutant.getEdgeSet().size());
         for (MyController.Edge e: mutant.getEdgeSet()) {
@@ -122,7 +122,7 @@ public class testGeneticOperationsAndInit {
         MyController mother = getIdentityController(1.0);
         MyController father = getIdentityController(2.0);
         CrossoverWithInnovation crossoverWithInnovation = new CrossoverWithInnovation();
-        AddEdgeMutation edgeMutation = new AddEdgeMutation(() -> 1.0, 1.0);
+        AddEdgeMutation edgeMutation = new AddEdgeMutation(() -> 1.0);
         AddNodeMutation nodeMutation = new AddNodeMutation(() -> 1.0);
         for (int i=0; i < 50; ++i) {
             if (i % 2 != 0) {
@@ -169,7 +169,7 @@ public class testGeneticOperationsAndInit {
         MyController mother = getIdentityController(1.0);
         MyController father = getIdentityController(2.0);
         CrossoverWithDonation crossover = new CrossoverWithDonation("growing");
-        AddEdgeMutation edgeMutation = new AddEdgeMutation(() -> 1.0, 1.0);
+        AddEdgeMutation edgeMutation = new AddEdgeMutation(() -> 1.0);
         AddNodeMutation nodeMutation = new AddNodeMutation(() -> 1.0);
         for (int i=0; i < 50; ++i) {
             if (i % 2 != 0) {

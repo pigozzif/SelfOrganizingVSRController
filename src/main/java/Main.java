@@ -92,6 +92,7 @@ public class Main extends Worker {
     private List<String> validationTransformationNames;
     private List<String> validationTerrainNames;
     private boolean validationFlag;
+    private String connectivity;
 
     public Main(String[] args) {
         super(args);
@@ -104,7 +105,7 @@ public class Main extends Worker {
     @Override
     public void run() {
         this.parseArguments();
-        Factory<MyController> basicFactory = new ControllerFactory(this.parameterSupplier, this.initPerc, this.morph.getBody(), this.morph.getNumSensors());
+        Factory<MyController> basicFactory = new ControllerFactory(this.parameterSupplier, this.initPerc, this.morph.getBody(), this.morph.getNumSensors(), (x, y) -> x.getX() == y.getX() && x.getY() == y.getY());
         if (!this.validationFlag) {
             //summarize params
             L.info(String.format("Starting evolution with %s", this.bestFileName));
@@ -115,7 +116,7 @@ public class Main extends Worker {
             //summarize params
             L.info(String.format("Starting validation with %s", this.bestFileName));
             //start iterations
-            this.performEvolution(this.prepareListenerFactory(), new ValidationFactory(1.0, Map.of(new AddNodeMutation(this.parameterSupplier, 0.5), 0.15, new AddEdgeMutation(this.parameterSupplier, 0.5), 0.15, new MutateEdge(0.7, 0.0), 0.7),
+            this.performEvolution(this.prepareListenerFactory(), new ValidationFactory(1.0, Map.of(new AddNodeMutation(this.parameterSupplier, 0.5, this.connectivity), 0.15, new AddEdgeMutation(this.parameterSupplier, 0.5, this.connectivity), 0.15, new MutateEdge(0.7, 0.0), 0.7),
                     (new ValidationBuilder("fixed", "rewiring")).buildValidation(this.getDonator(), this.getReceiver(), this.morph.getBody(), this.seed), basicFactory));
         }
     }
@@ -141,6 +142,7 @@ public class Main extends Worker {
         this.validationFileName = a("validationFile", dir + String.join(".", (validationFlag) ? "validation" : "", "test", String.valueOf(s), this.targetShapeName, "csv"));
         this.validationTransformationNames = l(a("validationTransformation", "identity")).stream().filter(sen -> !sen.isEmpty()).collect(Collectors.toList());
         this.validationTerrainNames = l(a("validationTerrain", "flat,hilly-1-10-0,hilly-1-10-1,hilly-1-10-2,steppy-1-10-0,steppy-1-10-1,steppy-1-10-2")).stream().filter(sen -> !sen.isEmpty()).collect(Collectors.toList());
+        this.connectivity = a("connectivity", null);
     }
 
     private String getDonator() {
@@ -203,7 +205,7 @@ public class Main extends Worker {
                 //build evolver
                 RobotMapper mapper = new RobotMapper(this.morph.getBody());
                 Evolver<MyController, Robot<?>, Outcome> evolver = new StandardEvolver<>(mapper, genotypeFactory, PartialComparator.from(Double.class).reversed().comparing(i -> i.getFitness().getVelocity()),
-                        this.popSize, Map.of(new AddNodeMutation(this.parameterSupplier, 0.5), 0.15, new AddEdgeMutation(this.parameterSupplier, 0.5), 0.15, new MutateEdge(0.7, 0.0), 0.7),// new CrossoverWithDonation("growing"), 0.1),// new MutateNode(), 0.25),
+                        this.popSize, Map.of(new AddNodeMutation(this.parameterSupplier, 0.5, this.connectivity), 0.15, new AddEdgeMutation(this.parameterSupplier, 0.5, this.connectivity), 0.15, new MutateEdge(0.7, 0.0), 0.7),// new CrossoverWithDonation("growing"), 0.1),// new MutateNode(), 0.25),
                         new Tournament(5), new Worst(), this.popSize, true, true);
                 Listener<Event<?, ? extends Robot<?>, ? extends Outcome>> listener = Listener.all(List.of(listenerFactory.build()));
                 //optimize

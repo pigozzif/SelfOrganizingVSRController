@@ -24,12 +24,12 @@ public class testIntegrationAndCompute {
 
     private static MyController getDefaultController() {
         Morphology morph = new WormMorphology(5, 1, "vel-area-touch");
-        return new ControllerFactory(random::nextDouble, 1.0, morph.getBody(), morph.getNumSensors()).build(random);
+        return new ControllerFactory(random::nextDouble, 1.0, morph.getBody(), morph.getNumSensors(), (x, y) -> x.getX() == y.getX() && x.getY() == y.getY()).build(random);
     }
 
     private static MyController getIdentityController() {
         Morphology morph = new WormMorphology(5, 1, "const");
-        return new ControllerFactory(() -> 1.0, 1.0, morph.getBody(), morph.getNumSensors()).build(random);
+        return new ControllerFactory(() -> 1.0, 1.0, morph.getBody(), morph.getNumSensors(), (x, y) -> x.getX() == y.getX() && x.getY() == y.getY()).build(random);
     }
 
     @Test(expected=Test.None.class /* no exception expected */)
@@ -47,7 +47,7 @@ public class testIntegrationAndCompute {
         Settings physicsSettings = new Settings();
         MyController controller = getDefaultController();
         controller = (new AddNodeMutation(() -> 1.0)).mutate(controller, random);
-        controller = (new AddEdgeMutation(() -> 1.0, 1.0)).mutate(controller, random);
+        controller = (new AddEdgeMutation(() -> 1.0)).mutate(controller, random);
         controller = (new MutateNode()).mutate(controller, random);
         controller = (new MutateEdge(0.1, 0.0)).mutate(controller, random);
         Robot<?> testRobot = new Robot<>(controller, (new WormMorphology(5, 5, "vel-area-touch")).getBody());
@@ -61,7 +61,7 @@ public class testIntegrationAndCompute {
         Settings physicsSettings = new Settings();
         MyController controller = getDefaultController();
         controller = (new AddNodeMutation(() -> 1.0)).mutate(controller, random);
-        controller = (new AddEdgeMutation(() -> 1.0, 1.0)).mutate(controller, random);
+        controller = (new AddEdgeMutation(() -> 1.0)).mutate(controller, random);
         controller = (new MutateNode()).mutate(controller, random);
         controller = (new MutateEdge(0.1, 0.0)).mutate(controller, random);
         controller = (new CrossoverWithDonation("traditional").recombine(controller, getIdentityController(), random));

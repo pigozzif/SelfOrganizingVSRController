@@ -47,7 +47,7 @@ public class ValidationBuilder {
         return output;
     }
 
-    public Controller<?>  parseIndividualFromFile(String fileName, Random random) {
+    public Controller<?> parseIndividualFromFile(String fileName, Random random) {
         List<CSVRecord> records;
         List<String> headers;
         try {
@@ -65,6 +65,10 @@ public class ValidationBuilder {
         SerializationUtils.Mode mode = SerializationUtils.Mode.valueOf(SerializationUtils.Mode.GZIPPED_JSON.name().toUpperCase());
         return RobotUtils.buildRobotTransformation(this.transformation, random)
                 .apply(SerializationUtils.deserialize(records.get(records.size() -1).get(this.serializationColumn), Robot.class, mode)).getController();
+    }
+
+    public Grid<Boolean> toBeCut(Grid<? extends SensingVoxel> body) {
+        return this.cutter.cut(body);
     }
 
     private static void writeBrainToFile(MyController controller, String inputName, String outputName) {

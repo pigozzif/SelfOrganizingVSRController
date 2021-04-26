@@ -87,6 +87,12 @@ public class Utils {
     public static List<NamedFunction<Individual<?, ? extends Robot<?>, ? extends Outcome>, ?>> individualFunctions(Function<Outcome, Double> fitnessFunction) {
         NamedFunction<Individual<?, ? extends Robot<?>, ? extends Outcome>, ?> size = size().of(genotype());
         return List.of(
+                f("connection_cost", "%5d", (Function<Controller<?>, Number>) x -> ((MyController) x).getSumSquaredLengths())
+                        .of(f("brain", (Function<Robot<?>, Controller<?>>) Robot::getController))
+                        .of(solution()),
+                f("q", "%5d", (Function<Controller<?>, Number>) x -> ((MyController) x).qMetric())
+                        .of(f("brain", (Function<Robot<?>, Controller<?>>) Robot::getController))
+                        .of(solution()),
                 f("neurons", "%5d", (Function<Controller<?>, Number>) x -> ((MyController) x).getNodeSet().size())
                         .of(f("brain", (Function<Robot<?>, Controller<?>>) Robot::getController))
                         .of(solution()),

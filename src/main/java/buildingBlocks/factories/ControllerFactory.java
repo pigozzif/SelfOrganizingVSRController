@@ -6,6 +6,7 @@ import it.units.erallab.hmsrobots.core.objects.SensingVoxel;
 import it.units.erallab.hmsrobots.util.Grid;
 
 import java.util.*;
+import java.util.function.BiPredicate;
 import java.util.function.Supplier;
 
 
@@ -15,12 +16,14 @@ public class ControllerFactory implements IndependentFactory<MyController> {
     private final double fillPerc;
     private final Grid<? extends SensingVoxel> body;
     private final int[] sensors;
+    private final BiPredicate<MyController.Neuron, MyController.Neuron> posFilter;
 
-    public ControllerFactory(Supplier<Double> s, double perc, Grid<? extends SensingVoxel> b, int[] sen) {
+    public ControllerFactory(Supplier<Double> s, double perc, Grid<? extends SensingVoxel> b, int[] sen, BiPredicate<MyController.Neuron, MyController.Neuron> filter) {
         this.parameterSupplier = s;
         this.fillPerc = perc;
         this.body = b;
         this.sensors = sen;
+        this.posFilter = filter;
     }
 
     @Override
@@ -45,7 +48,7 @@ public class ControllerFactory implements IndependentFactory<MyController> {
         for (MyController.Neuron n1 : controller.getNodeSet()) {
             for (MyController.Neuron n2 : controller.getNodeSet()) {
                 if (n1.isSensing() && n2.isActuator() &&
-                        n1.getX() == n2.getX() && n1.getY() == n2.getY() && random.nextDouble() < this.fillPerc) {
+                        this.posFilter.test(n1, n2) && random.nextDouble() < this.fillPerc) {
                     controller.addEdge(n1.getIndex(), n2.getIndex(), this.parameterSupplier.get(), this.parameterSupplier.get());
                 }
             }

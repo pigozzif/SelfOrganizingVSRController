@@ -52,7 +52,7 @@ public class RewiringAssembler implements Assembler {
         this.cutFromReceiver(hybrid, controller1);
         this.visitFast(controller2, this::isToCut);
         this.moveFromDonator(hybrid, controller2);
-        this.reWire(hybrid, random);
+        //this.reWire(hybrid, random);
         return hybrid;
     }
 

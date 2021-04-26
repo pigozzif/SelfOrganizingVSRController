@@ -465,6 +465,24 @@ public class MyController implements Controller<SensingVoxel>, Sized {
         return Objects.hash(first, second);
     }
 
+    public double getSumSquaredLengths() {
+        return this.getEdgeSet().stream().mapToDouble(e -> euclideanDistance(this.nodes.get(e.getSource()), this.nodes.get(e.getTarget()))).sum();
+    }
+
+    public double qMetric() {
+        double numWithinEdges = 0.0;
+        for (Edge e : this.getEdgeSet()) {
+            Neuron source = this.nodes.get(e.getSource());
+            Neuron target = this.nodes.get(e.getTarget());
+            boolean whatAboutSource = source.getX() <= 2;
+            boolean whatAboutTarget = target.getX() <= 2;
+            if ((whatAboutSource && whatAboutTarget) || (!whatAboutSource && !whatAboutTarget)) {
+                numWithinEdges += 1.0;
+            }
+        }
+        return numWithinEdges / this.getEdgeSet().size();
+    }
+
     @Override
     public void control(double t, Grid<? extends SensingVoxel> voxels) {
         this.getNodeSet().forEach(n -> n.compute(voxels, this));
