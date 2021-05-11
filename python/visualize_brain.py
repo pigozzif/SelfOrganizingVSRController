@@ -9,7 +9,7 @@ import re
 
 class Drawer(object):
 
-    def __init__(self, voxels, voxel_size, node_size, pad, blank_size):
+    def __init__(self, voxels, voxel_size, node_size, pad, blank_size, shape):
         self.voxels = voxels
         self.voxel_size = voxel_size
         self.node_size = node_size
@@ -18,12 +18,13 @@ class Drawer(object):
         self.image = Image.new("RGB", ((pad * 2) + (voxel_size * (max(voxels, key=lambda x: x[0])[0] + 1)),
                                        (pad * 2) + (voxel_size * (max(voxels, key=lambda x: x[1])[1] + 1))), "white")
         self.draw = ImageDraw.Draw(self.image)
+        self.shape = shape
 
     def plot_edges(self, edges, nodes_positions, nodes):
         for (u, v), w in edges.items():
             self.plot_arrow(nodes_positions[v], nodes_positions[u],
-                            color="black" if nodes[u]["x"] == nodes[v]["x"]
-                                             and nodes[u]["y"] == nodes[v]["y"] else "red", width=abs(w))
+                            color="black" if is_not_crossing_edge(nodes[u]["x"], nodes[u]["y"],
+                                                                  nodes[v]["x"], nodes[v]["y"], self.shape) else "red", width=abs(w))
 
     def plot_rectangles(self):
         for x, voxel in enumerate(self.voxels):
@@ -136,6 +137,13 @@ def flip_coordinates(nodes, voxel_to_num_sensors):
         new_voxel_to_num_sensors[(x, temp[y])] = num
     return nodes, new_voxel_to_num_sensors
 
+def is_not_crossing_edge(x1, y1, x2, y2, shape):
+    if shape == "worm":
+        return (x1 <= 2 and x2 <= 2) or (x1 > 2 and x2 > 2)
+    elif shape == "biped":
+        return (x1 == 0 and x2 == 0) or (x1 == 3 and x2 == 3) or (0 < x1 < 3 and 0 < x2 < 3)
+    raise Exception("Unknown shape: " + shape)
+
 
 def main(input_file, output_file):
     nodes, edges, voxel_to_num_sensors = read_file(input_file)
@@ -147,7 +155,7 @@ def main(input_file, output_file):
     blank_size = node_size * 2
     func_to_color = {"SIGMOID": "yellow", "RELU": "cyan", "TANH": "green", "SIN": "orange"}
     font = ImageFont.truetype("/Library/Fonts/times_new_roman.ttf", 15)
-    drawer = Drawer(voxels, voxel_size, node_size, pad, blank_size)
+    drawer = Drawer(voxels, voxel_size, node_size, pad, blank_size, "biped" if "biped" in input_file else "worm")
     drawer.plot_rectangles()
     nodes_positions = drawer.plot_nodes(nodes, font, func_to_color, voxel_to_num_sensors)
     drawer.plot_edges(edges, nodes_positions, nodes)

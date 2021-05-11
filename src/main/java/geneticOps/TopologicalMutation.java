@@ -14,4 +14,24 @@ public interface TopologicalMutation extends Mutation<MyController> {
         };
     }
 
+    static boolean isNotCrossingEdge(String morph, MyController.Neuron neuron1, MyController.Neuron neuron2) {
+        int x1 = neuron1.getX();
+        int x2 = neuron2.getX();
+        return switch (morph) {
+            case "worm-5x1" -> false;
+            case "worm-6x2" -> (x1 <= 2 && x2 <= 2) || (x1 > 2 && x2 > 2);
+            case "biped-4x3" -> (x1 == 0 && x2 == 0) || (x1 == 3 && x2 == 3) || (x1 != 0 && x1 != 3 && x2 != 0 && x2 != 3);
+            default -> throw new IllegalArgumentException("Morphology not known: " + morph);
+        };
+    }
+
+    static double[] getEdgeProbs(String conf) {
+        return switch (conf) {
+            case "minimal" -> new double[] {1.0, 1.0};
+            case "unmodular" -> new double[] {1.0, 10.0};
+            case "modular" -> new double[] {10.0, 1.0};
+            default -> throw new IllegalArgumentException("Configuration not known: " + conf);
+        };
+    }
+
 }

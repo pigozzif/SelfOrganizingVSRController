@@ -15,6 +15,7 @@
  */
 
 import buildingBlocks.MyController;
+import geneticOps.TopologicalMutation;
 import it.units.erallab.hmsrobots.core.controllers.Controller;
 import it.units.erallab.hmsrobots.core.objects.Robot;
 import it.units.erallab.hmsrobots.core.objects.SensingVoxel;
@@ -96,7 +97,7 @@ public class Utils {
                 f("neurons", "%5d", (Function<Controller<?>, Number>) x -> ((MyController) x).getNodeSet().size())
                         .of(f("brain", (Function<Robot<?>, Controller<?>>) Robot::getController))
                         .of(solution()),
-                f("edges", "5%d", (Function<Controller<?>, Number>) x -> ((MyController) x).getEdgeSet().size())
+                f("edges", "%5d", (Function<Controller<?>, Number>) x -> ((MyController) x).getEdgeSet().size())
                         .of(f("brain", (Function<Robot<?>, Controller<?>>) Robot::getController))
                         .of(solution()),
                 /*f("w", "%2d", (Function<Grid<?>, Number>) Grid::getW)

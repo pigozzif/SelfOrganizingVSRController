@@ -2,6 +2,7 @@ package geneticOps;
 
 import buildingBlocks.MyController;
 import it.units.erallab.hmsrobots.core.controllers.MultiLayerPerceptron;
+import it.units.malelab.jgea.core.util.Misc;
 import org.apache.commons.math3.util.Pair;
 
 import java.util.*;
@@ -14,15 +15,19 @@ public class AddNodeMutation implements TopologicalMutation {
     private final Supplier<Double> parameterSupplier;
     private final double perc;
     private final double maxDist;
+    private final String morphology;
+    private final String configuration;
 
-    public AddNodeMutation(Supplier<Double> sup, double p, String dist) {
+    public AddNodeMutation(Supplier<Double> sup, double p, String dist, String morph, String conf) {
         this.parameterSupplier = sup;
         this.perc = p;
         this.maxDist = TopologicalMutation.getMaxDist(dist);
+        this.morphology = morph;
+        this.configuration = conf;
     }
 
     public AddNodeMutation(Supplier<Double> sup) {
-        this(sup, 1.0, "minimal");
+        this(sup, 1.0, "minimal", "worm-5x1", "minimal");
     }
 
     @Override
@@ -31,9 +36,6 @@ public class AddNodeMutation implements TopologicalMutation {
         int sampleX = pair.getFirst();
         int sampleY = pair.getSecond();
         MyController newBorn = new MyController(parent);
-        //List<MyController.Edge> edges = newBorn.getEdgeSet();
-        //MyController.Edge edge = edges.get(random.nextInt(edges.size()));
-        //newBorn.splitEdge(edge, this.parameterSupplier, random);
         if (random.nextDouble() <= this.perc) {
             this.enableMutation(newBorn, sampleX, sampleY, random);
         }
@@ -46,16 +48,22 @@ public class AddNodeMutation implements TopologicalMutation {
     private void enableMutation(MyController controller, int sampleX, int sampleY, Random random) {
         List<MyController.Neuron> candidates = controller.getNodeSet().stream().filter(n -> MyController.euclideanDistance(sampleX, sampleY, n.getX(), n.getY()) <= this.maxDist)
                 .collect(Collectors.toList());
-        Pair<MyController.Neuron, MyController.Neuron> trial = this.pickPair(candidates, random);
-        controller.addHiddenNode(trial.getFirst().getIndex(), trial.getSecond().getIndex(), MultiLayerPerceptron.ActivationFunction.SIGMOID, sampleX, sampleY, this.parameterSupplier);
+        Pair<Integer, Integer> trial = this.pickPair(candidates, random);
+        controller.addHiddenNode(trial.getFirst(), trial.getSecond(), MultiLayerPerceptron.ActivationFunction.SIGMOID, sampleX, sampleY, this.parameterSupplier);
     }
 
-    private Pair<MyController.Neuron, MyController.Neuron> pickPair(List<MyController.Neuron> candidates, Random random) {
-        List<MyController.Neuron> sourceCandidates = candidates.stream().filter(n -> !n.isActuator()).collect(Collectors.toList());
-        List<MyController.Neuron> targetCandidates = candidates.stream().filter(n -> !n.isSensing()).collect(Collectors.toList());
-        MyController.Neuron source = sourceCandidates.get(random.nextInt(sourceCandidates.size()));
-        MyController.Neuron target = targetCandidates.get(random.nextInt(targetCandidates.size()));
-        return new Pair<>(source, target);
+    private Pair<Integer, Integer> pickPair(List<MyController.Neuron> candidates, Random random) {
+        Map<Pair<Integer, Integer>, Double> nodes = new HashMap<>();
+        double[] probs = TopologicalMutation.getEdgeProbs(this.configuration);
+        for (MyController.Neuron neuron1 : candidates) {
+            for (MyController.Neuron neuron2 : candidates) {
+                if (!neuron1.isActuator() && !neuron2.isSensing()) {
+                    double weight = (TopologicalMutation.isNotCrossingEdge(this.morphology, neuron1, neuron2)) ? probs[0] : probs[1];
+                    nodes.put(new Pair<>(neuron1.getIndex(), neuron2.getIndex()), weight);
+                }
+            }
+        }
+        return Misc.pickRandomly(nodes, random);
     }
 
     private void disableMutation(MyController controller, Random random) {
