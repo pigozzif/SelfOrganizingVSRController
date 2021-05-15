@@ -33,9 +33,11 @@ public class AddEdgeMutation implements TopologicalMutation {
         MyController newBorn = new MyController(parent);
         if (random.nextDouble() <= this.perc) {
             this.enableMutation(newBorn, random);
+            newBorn.setOrigin("add_edge");
         }
         else {
             this.disableMutation(newBorn, random);
+            newBorn.setOrigin("remove_edge");
         }
         return newBorn;
     }

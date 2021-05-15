@@ -33,6 +33,8 @@ public class ValidationFactory implements Factory<MyController> {
             pop.add(Misc.pickRandomly(this.operators, random).apply(List.of(this.individualSeed), random).get(0));
         }
         pop.addAll(this.randomInitializer.build(n - pop.size(), random));
+        pop.forEach(i -> i.setOrigin("val_init"));
+        this.individualSeed.setOrigin("seed");
         return pop;
     }
 

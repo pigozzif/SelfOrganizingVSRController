@@ -100,6 +100,9 @@ public class Utils {
                 f("edges", "%5d", (Function<Controller<?>, Number>) x -> ((MyController) x).getEdgeSet().size())
                         .of(f("brain", (Function<Robot<?>, Controller<?>>) Robot::getController))
                         .of(solution()),
+                f("origin", "%s", (Function<Controller<?>, String>) x -> ((MyController) x).getOrigin())
+                        .of(f("brain", (Function<Robot<?>, Controller<?>>) Robot::getController))
+                        .of(solution()),
                 /*f("w", "%2d", (Function<Grid<?>, Number>) Grid::getW)
                         .of(f("shape", (Function<Robot<?>, Grid<?>>) Robot::getVoxels))
                         .of(solution()),

@@ -24,6 +24,7 @@ public class MutateEdge implements Mutation<MyController> {
         MyController newBorn = new MyController(parent);
         if (random.nextDouble() >= this.perc) {
             this.perturbParameters(newBorn, random);
+            newBorn.setOrigin("mutate_edge");
         }
         else {
             this.perturbDelay(newBorn, random);

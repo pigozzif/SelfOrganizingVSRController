@@ -300,6 +300,7 @@ public class MyController implements Controller<SensingVoxel>, Sized {
 
     @JsonProperty
     private Map<Integer, Neuron> nodes;
+    private String origin = "null";
 
     @JsonCreator
     public MyController(@JsonProperty("nodes") Map<Integer, Neuron> neurons) {
@@ -312,6 +313,10 @@ public class MyController implements Controller<SensingVoxel>, Sized {
     public MyController(MyController other) {
         this(other.getNodeMap());
     }
+
+    public void setOrigin(String or) { this.origin = or; }
+
+    public String getOrigin() { return this.origin; }
 
     public Map<Integer, Neuron> getNodeMap() { return this.nodes; }
 

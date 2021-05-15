@@ -41,6 +41,7 @@ public class ControllerFactory implements IndependentFactory<MyController> {
             controller.addActuatorNode(x, y);
         }
         this.initInVoxelEdges(controller, random);
+        controller.setOrigin("init");
         return controller;
     }
 

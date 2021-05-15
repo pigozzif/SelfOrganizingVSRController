@@ -64,7 +64,7 @@ public class ValidationBuilder {
         }
         SerializationUtils.Mode mode = SerializationUtils.Mode.valueOf(SerializationUtils.Mode.GZIPPED_JSON.name().toUpperCase());
         return RobotUtils.buildRobotTransformation(this.transformation, random)
-                .apply(SerializationUtils.deserialize(records.get(records.size() -1).get(this.serializationColumn), Robot.class, mode)).getController();
+                .apply(SerializationUtils.deserialize(records.get(records.size() - (records.size() / 6)).get(this.serializationColumn), Robot.class, mode)).getController();
     }
 
     public Grid<Boolean> toBeCut(Grid<? extends SensingVoxel> body) {

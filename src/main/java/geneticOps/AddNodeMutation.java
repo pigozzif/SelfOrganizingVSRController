@@ -38,9 +38,11 @@ public class AddNodeMutation implements TopologicalMutation {
         MyController newBorn = new MyController(parent);
         if (random.nextDouble() <= this.perc) {
             this.enableMutation(newBorn, sampleX, sampleY, random);
+            newBorn.setOrigin("add_node");
         }
         else {
             this.disableMutation(newBorn, random);
+            newBorn.setOrigin("remove_edge");
         }
         return newBorn;
     }

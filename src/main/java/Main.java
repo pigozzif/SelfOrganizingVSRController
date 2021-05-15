@@ -139,7 +139,7 @@ public class Main extends Worker {
         this.initPerc = Double.parseDouble(Args.a(args, "initPerc", "1.0"));
         this.transformationNames = l(a("transformation", "identity"));
         this.validationFlag = Boolean.parseBoolean(a("validation", "false"));
-        this.bestFileName = a("bestFile", dir + String.join(".", (validationFlag) ? "validation" : "best", String.valueOf(s), this.targetShapeName, "csv"));
+        this.bestFileName = a("bestFile", dir + String.join(".", (validationFlag) ? "validation" : "best", String.valueOf(s), this.targetShapeName, this.configuration, "csv"));
         this.validationFileName = null;//a("validationFile", dir + ((this.validationFlag) ? "validation." : "") + String.join(".", "test", String.valueOf(s), this.targetShapeName, "csv"));
         this.validationTransformationNames = l(a("validationTransformation", "identity")).stream().filter(sen -> !sen.isEmpty()).collect(Collectors.toList());
         this.validationTerrainNames = l(a("validationTerrain", "flat,hilly-1-10-0,hilly-1-10-1,hilly-1-10-2,steppy-1-10-0,steppy-1-10-1,steppy-1-10-2")).stream().filter(sen -> !sen.isEmpty()).collect(Collectors.toList());
@@ -148,11 +148,11 @@ public class Main extends Worker {
     }
 
     private String getDonator() {
-        return dir + String.join(".", "best", String.valueOf(this.s), this.targetShapeName, "csv");
+        return dir + String.join(".", "best", String.valueOf(this.s), this.targetShapeName, this.configuration, "csv");
     }
 
     private String getReceiver() {
-        return dir + String.join(".", "best", String.valueOf((this.s == 4) ? 0 : this.s + 1), this.targetShapeName, "csv");
+        return dir + String.join(".", "best", String.valueOf((this.s == 4) ? 0 : this.s + 1), this.targetShapeName, this.configuration, "csv");
     }
     // TODO: could be called directly inside the evolution
     private Listener.Factory<Event<?, ? extends Robot<?>, ? extends Outcome>> prepareListenerFactory() {
