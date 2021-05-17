@@ -21,20 +21,22 @@ import java.util.Random;
 
 public class ValidationBuilder {
 
+    private final String shape;
     private final String serializationColumn;
     private final String transformation;
     private final Cutter cutter;
     private final Assembler assembler;
 
-    public ValidationBuilder(String serialized, String transf, String cuttingStrategy, String assemblyStrategy) {
+    public ValidationBuilder(String shape, String serialized, String transf, String cuttingStrategy, String assemblyStrategy) {
+        this.shape = shape;
         this.serializationColumn = serialized;
         this.transformation = transf;
         this.cutter = Cutter.createCutter(cuttingStrategy);
-        this.assembler = Assembler.createAssembler(assemblyStrategy);
+        this.assembler = Assembler.createAssembler(assemblyStrategy, this.shape);
     }
 
-    public ValidationBuilder(String cuttingStrategy, String assemblyStrategy) {
-        this("best→solution→serialized", "identity", cuttingStrategy, assemblyStrategy);
+    public ValidationBuilder(String shape, String cuttingStrategy, String assemblyStrategy) {
+        this(shape, "best→solution→serialized", "identity", cuttingStrategy, assemblyStrategy);
     }
 
     public MyController buildValidation(String file1, String file2, Grid<? extends SensingVoxel> body, Random random) {
@@ -64,7 +66,7 @@ public class ValidationBuilder {
         }
         SerializationUtils.Mode mode = SerializationUtils.Mode.valueOf(SerializationUtils.Mode.GZIPPED_JSON.name().toUpperCase());
         return RobotUtils.buildRobotTransformation(this.transformation, random)
-                .apply(SerializationUtils.deserialize(records.get(records.size() - (records.size() / 6)).get(this.serializationColumn), Robot.class, mode)).getController();
+                .apply(SerializationUtils.deserialize(records.get(records.size() - 1).get(this.serializationColumn), Robot.class, mode)).getController();
     }
 
     public Grid<Boolean> toBeCut(Grid<? extends SensingVoxel> body) {

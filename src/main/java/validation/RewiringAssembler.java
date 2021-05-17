@@ -1,6 +1,7 @@
 package validation;
 
 import buildingBlocks.MyController;
+import geneticOps.TopologicalMutation;
 import it.units.erallab.hmsrobots.util.Grid;
 
 import java.util.*;
@@ -31,15 +32,17 @@ public class RewiringAssembler implements Assembler {
     private Grid<Boolean> cuttingGrid;
     private final List<CrossingEdge> crossingEdges;
     private final Supplier<Double> parameterSupplier;
+    private final String shape;
 
-    public RewiringAssembler(Supplier<Double> supplier) {
+    public RewiringAssembler(String shape, Supplier<Double> supplier) {
         this.visitedNeurons = new HashMap<>();
         this.crossingEdges = new ArrayList<>();
         this.parameterSupplier = supplier;
+        this.shape = shape;
     }
 
-    public RewiringAssembler() {
-        this(null);
+    public RewiringAssembler(String shape) {
+        this(shape, null);
     }
 
     @Override
@@ -52,20 +55,22 @@ public class RewiringAssembler implements Assembler {
         this.cutFromReceiver(hybrid, controller1);
         this.visitFast(controller2, this::isToCut);
         this.moveFromDonator(hybrid, controller2);
+        this.pruneIsolatedNeurons(hybrid);
         //this.reWire(hybrid, random);
         return hybrid;
     }
 
     private void cutFromReceiver(MyController hybrid, MyController receiver) {
         for (MyController.Edge edge : hybrid.getEdgeSet()) {
+            MyController.Neuron source = receiver.getNodeMap().get(edge.getSource());
+            MyController.Neuron target = receiver.getNodeMap().get(edge.getTarget());
             boolean whatAboutSource = this.visitedNeurons.containsKey(edge.getSource());
             boolean whatAboutTarget = this.visitedNeurons.containsKey(edge.getTarget());
-            if (whatAboutSource && whatAboutTarget) {
+            if (whatAboutSource && whatAboutTarget && TopologicalMutation.isNotCrossingEdge(shape, source, target)) {
                 hybrid.removeEdge(edge);
             }
             else if (whatAboutSource || whatAboutTarget) {
-                MyController.Neuron source = receiver.getNodeMap().get(edge.getSource());
-                MyController.Neuron target = receiver.getNodeMap().get(edge.getTarget());
+                hybrid.removeEdge(edge);
                 this.crossingEdges.add(new CrossingEdge(edge, source, target, false));
             }
         }
@@ -88,16 +93,16 @@ public class RewiringAssembler implements Assembler {
             }
         }
         for (MyController.Edge edge : donator.getEdgeSet()) {
+            MyController.Neuron source = donator.getNodeMap().get(edge.getSource());
+            MyController.Neuron target = donator.getNodeMap().get(edge.getTarget());
             boolean whatAboutSource = this.visitedNeurons.containsKey(edge.getSource());
             boolean whatAboutTarget = this.visitedNeurons.containsKey(edge.getTarget());
-            if (whatAboutSource && whatAboutTarget) {
+            if (whatAboutSource && whatAboutTarget && TopologicalMutation.isNotCrossingEdge(shape, source, target)) {
                 edge.setSource(fromOldToNew.get(edge.getSource()));
                 edge.setTarget(fromOldToNew.get(edge.getTarget()));
                 hybrid.copyEdge(edge);
             }
             else if (whatAboutSource || whatAboutTarget) {
-                MyController.Neuron source = donator.getNodeMap().get(edge.getSource());
-                MyController.Neuron target = donator.getNodeMap().get(edge.getTarget());
                 this.crossingEdges.add(new CrossingEdge(edge, source, target, true));
             }
         }
@@ -139,6 +144,19 @@ public class RewiringAssembler implements Assembler {
 
     private boolean isToCut(MyController.Neuron neuron) {
         return this.cuttingGrid.get(neuron.getX(), neuron.getY());
+    }
+
+    private void pruneIsolatedNeurons(MyController controller) {
+        Map<Integer, List<MyController.Edge>> outgoingEdges = controller.getOutgoingEdges();
+        this.visitedNeurons.clear();
+        for (MyController.Neuron neuron : controller.getNodeSet()) {
+            if (neuron.isHidden() && neuron.getIngoingEdges().isEmpty() &&
+                    !outgoingEdges.containsKey(neuron.getIndex())) {
+                this.visitedNeurons.put(neuron.getIndex(), neuron);
+            }
+        }
+        this.visitedNeurons.values().forEach(controller::removeNeuron);
+        this.visitedNeurons.clear();
     }
 
 }

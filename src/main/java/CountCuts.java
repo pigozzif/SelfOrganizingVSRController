@@ -16,41 +16,42 @@ import static morphologies.Morphology.sensorsFactory;
 
 public class CountCuts {
 
-    private static final File dir = new File("/Users/federicopigozzi/Downloads/worm_very_long_fat_modular/");
-    private static final String shape = "worm-6x2";
-    private static final String exp = "modular";
-    //private static final String isMixed = "true";
-    private static final String sensorConfig = "spinedTouchSighted-f-f-0.01";
+    private static final File dir = new File("/Users/federicopigozzi/Downloads/biped_very_long_fat_modular/");
+    private static final String shape = "biped-4x3";
+    private static final String conf = "modular";
+    private static final String exp = "second";
+    //private static final String sensorConfig = "spinedTouchSighted-f-f-0.01";
 
     public static void main(String[] args) throws IOException {
         Map<Integer, File> bestFiles = new HashMap<>();
         for (File file : Objects.requireNonNull(dir.listFiles())) {
-            if (file.getPath().contains("best")) {
+            if (file.getPath().contains("validation") && file.getPath().contains(exp)) {
                 bestFiles.put(Integer.parseInt(file.getPath().split("\\.")[1]), file);
             }
         }
-        Grid<Boolean> booleanGrid = RobotUtils.buildShape(shape);
-        Grid<? extends SensingVoxel> body = sensorsFactory(sensorConfig).apply(booleanGrid);
-        ValidationBuilder validationBuilder = new ValidationBuilder("fixed", "rewiring");
+        //Grid<Boolean> booleanGrid = RobotUtils.buildShape(shape);
+        //Grid<? extends SensingVoxel> body = sensorsFactory(sensorConfig).apply(booleanGrid);
+        ValidationBuilder validationBuilder = new ValidationBuilder(shape, "fixed", "rewiring");
         BufferedWriter writer = new BufferedWriter(new FileWriter("cut.csv", true));
 
         for (Map.Entry<Integer, File> entry : bestFiles.entrySet()) {
             int seed = entry.getKey();
             Random random = new Random(seed);
-            String file1 = entry.getValue().getPath();
-            //String file2 = entry.getValue().getPath().replace("." + entry.getKey(), "." + ((seed == 4) ? 0 : seed + 1));
-            MyController controller = (MyController) validationBuilder.parseIndividualFromFile(file1, random);
-            //MyController controller2 = (MyController) validationBuilder.parseIndividualFromFile(file2, random);
-            //MyController hybrid = validationBuilder.buildValidation(file1, file2, body, random);
+            String validationFile = entry.getValue().getPath();
+            String receiverFile = entry.getValue().getPath().replace("." + entry.getKey(), "." + ((seed == 4) ? 0 : seed + 1)).replace("validation", "best").replace("." + exp, "");
+            String donatorFile = entry.getValue().getPath().replace("validation", "best").replace("." + exp, "");;
+            MyController receiverController = (MyController) validationBuilder.parseIndividualFromFile(receiverFile, random);
+            MyController donatorController = (MyController) validationBuilder.parseIndividualFromFile(donatorFile, random);
+            //MyController hybrid = validationBuilder.buildValidation(receiverFile, donatorFile, body, random);
 
             //String val = file1.replace("best", "validation");
-            double totalEdgeWeights = controller.getEdgeSet().stream().mapToDouble(e -> Math.abs(e.getParams()[0]) + Math.abs(e.getParams()[1])).sum();// + controller2.getEdgeSet().stream().mapToDouble(e -> Math.abs(e.getParams()[0]) + Math.abs(e.getParams()[1])).sum();
-            double totalEdges = controller.getEdgeSet().size();
-           //Grid<Boolean> grid = validationBuilder.toBeCut(body);
-            double percWeights = countCrossingEdgesWeight(controller) / totalEdgeWeights;
-            double percConnections = countCrossingConnections(controller) / totalEdges;
+            double totalEdgeWeights = receiverController.getEdgeSet().stream().mapToDouble(e -> Math.abs(e.getParams()[0]) + Math.abs(e.getParams()[1])).sum() + donatorController.getEdgeSet().stream().mapToDouble(e -> Math.abs(e.getParams()[0]) + Math.abs(e.getParams()[1])).sum();
+            double totalEdges = receiverController.getEdgeSet().size() + donatorController.getEdgeSet().size();
+            //Grid<Boolean> grid = validationBuilder.toBeCut(body);
+            double percWeights = (countCrossingEdgesWeight(receiverController) + countCrossingEdgesWeight(donatorController)) / totalEdgeWeights;
+            double percConnections = (countCrossingConnections(receiverController) + countCrossingConnections(donatorController)) / totalEdges;
             writer.write(String.join(",", String.valueOf(percConnections), String.valueOf(percWeights),
-                    /*String.valueOf(getLastMeanPerformance(file1)), String.valueOf(getLastMeanPerformance(val)),*/ shape, exp));
+                    String.valueOf(getLastMeanPerformance(receiverFile) - getLastMeanPerformance(validationFile)), shape, conf, exp));
             writer.write("\n");
         }
 

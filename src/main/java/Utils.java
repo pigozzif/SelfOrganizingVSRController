@@ -103,6 +103,9 @@ public class Utils {
                 f("origin", "%s", (Function<Controller<?>, String>) x -> ((MyController) x).getOrigin())
                         .of(f("brain", (Function<Robot<?>, Controller<?>>) Robot::getController))
                         .of(solution()),
+                f("iter", "%5d", (Function<Controller<?>, Number>) x -> ((MyController) x).getIteration())
+                        .of(f("brain", (Function<Robot<?>, Controller<?>>) Robot::getController))
+                        .of(solution()),
                 /*f("w", "%2d", (Function<Grid<?>, Number>) Grid::getW)
                         .of(f("shape", (Function<Robot<?>, Grid<?>>) Robot::getVoxels))
                         .of(solution()),

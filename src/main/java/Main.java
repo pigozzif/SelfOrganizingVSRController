@@ -118,7 +118,7 @@ public class Main extends Worker {
             L.info(String.format("Starting validation with %s", this.bestFileName));
             //start iterations
             this.performEvolution(this.prepareListenerFactory(), new ValidationFactory(1.0, Map.of(new AddNodeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.3, new AddEdgeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.2, new MutateEdge(0.7, 0.0), 0.5),
-                    (new ValidationBuilder("fixed", "rewiring")).buildValidation(this.getDonator(), this.getReceiver(), this.morph.getBody(), this.seed), basicFactory));
+                    (new ValidationBuilder(this.targetShapeName, "fixed", "rewiring")).buildValidation(this.getDonator(), this.getReceiver(), this.morph.getBody(), this.seed), basicFactory));
         }
     }
 
@@ -139,12 +139,12 @@ public class Main extends Worker {
         this.initPerc = Double.parseDouble(Args.a(args, "initPerc", "1.0"));
         this.transformationNames = l(a("transformation", "identity"));
         this.validationFlag = Boolean.parseBoolean(a("validation", "false"));
+        this.configuration = a("configuration", null);
         this.bestFileName = a("bestFile", dir + String.join(".", (validationFlag) ? "validation" : "best", String.valueOf(s), this.targetShapeName, this.configuration, "csv"));
         this.validationFileName = null;//a("validationFile", dir + ((this.validationFlag) ? "validation." : "") + String.join(".", "test", String.valueOf(s), this.targetShapeName, "csv"));
         this.validationTransformationNames = l(a("validationTransformation", "identity")).stream().filter(sen -> !sen.isEmpty()).collect(Collectors.toList());
         this.validationTerrainNames = l(a("validationTerrain", "flat,hilly-1-10-0,hilly-1-10-1,hilly-1-10-2,steppy-1-10-0,steppy-1-10-1,steppy-1-10-2")).stream().filter(sen -> !sen.isEmpty()).collect(Collectors.toList());
         this.connectivity = a("connectivity", null);
-        this.configuration = a("configuration", null);
     }
 
     private String getDonator() {

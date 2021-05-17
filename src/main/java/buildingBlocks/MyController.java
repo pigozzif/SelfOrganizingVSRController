@@ -301,6 +301,7 @@ public class MyController implements Controller<SensingVoxel>, Sized {
     @JsonProperty
     private Map<Integer, Neuron> nodes;
     private String origin = "null";
+    private int iteration = 0;
 
     @JsonCreator
     public MyController(@JsonProperty("nodes") Map<Integer, Neuron> neurons) {
@@ -312,11 +313,14 @@ public class MyController implements Controller<SensingVoxel>, Sized {
 
     public MyController(MyController other) {
         this(other.getNodeMap());
+        this.iteration = other.iteration;
     }
 
     public void setOrigin(String or) { this.origin = or; }
 
     public String getOrigin() { return this.origin; }
+
+    public int getIteration() { return this.iteration; }
 
     public Map<Integer, Neuron> getNodeMap() { return this.nodes; }
 
@@ -490,6 +494,9 @@ public class MyController implements Controller<SensingVoxel>, Sized {
 
     @Override
     public void control(double t, Grid<? extends SensingVoxel> voxels) {
+        if (t <= 0.017) {
+            ++this.iteration;
+        }
         this.getNodeSet().forEach(n -> n.compute(voxels, this));
         this.getNodeSet().forEach(Neuron::advance);
     }
