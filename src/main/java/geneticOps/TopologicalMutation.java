@@ -3,6 +3,11 @@ package geneticOps;
 import buildingBlocks.MyController;
 import it.units.malelab.jgea.core.operator.Mutation;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 
 public interface TopologicalMutation extends Mutation<MyController> {
 
@@ -32,6 +37,18 @@ public interface TopologicalMutation extends Mutation<MyController> {
             case "modular" -> new double[] {10.0, 1.0};
             default -> throw new IllegalArgumentException("Configuration not known: " + conf);
         };
+    }
+
+    static void pruneIsolatedNeurons(MyController controller) {
+        Map<Integer, List<MyController.Edge>> outgoingEdges = controller.getOutgoingEdges();
+        Set<MyController.Neuron> visitedNeurons = new HashSet<>();
+        for (MyController.Neuron neuron : controller.getNodeSet()) {
+            if (neuron.isHidden() && neuron.getIngoingEdges().isEmpty() &&
+                    !outgoingEdges.containsKey(neuron.getIndex())) {
+                visitedNeurons.add(neuron);
+            }
+        }
+        visitedNeurons.forEach(controller::removeNeuron);
     }
 
 }

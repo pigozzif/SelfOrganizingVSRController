@@ -55,7 +55,7 @@ public class RewiringAssembler implements Assembler {
         this.cutFromReceiver(hybrid, controller1);
         this.visitFast(controller2, this::isToCut);
         this.moveFromDonator(hybrid, controller2);
-        this.pruneIsolatedNeurons(hybrid);
+        TopologicalMutation.pruneIsolatedNeurons(hybrid);
         //this.reWire(hybrid, random);
         return hybrid;
     }
@@ -144,19 +144,6 @@ public class RewiringAssembler implements Assembler {
 
     private boolean isToCut(MyController.Neuron neuron) {
         return this.cuttingGrid.get(neuron.getX(), neuron.getY());
-    }
-
-    private void pruneIsolatedNeurons(MyController controller) {
-        Map<Integer, List<MyController.Edge>> outgoingEdges = controller.getOutgoingEdges();
-        this.visitedNeurons.clear();
-        for (MyController.Neuron neuron : controller.getNodeSet()) {
-            if (neuron.isHidden() && neuron.getIngoingEdges().isEmpty() &&
-                    !outgoingEdges.containsKey(neuron.getIndex())) {
-                this.visitedNeurons.put(neuron.getIndex(), neuron);
-            }
-        }
-        this.visitedNeurons.values().forEach(controller::removeNeuron);
-        this.visitedNeurons.clear();
     }
 
 }

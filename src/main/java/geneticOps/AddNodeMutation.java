@@ -42,6 +42,7 @@ public class AddNodeMutation implements TopologicalMutation {
         }
         else {
             this.disableMutation(newBorn, random);
+            TopologicalMutation.pruneIsolatedNeurons(newBorn);
             newBorn.setOrigin("remove_edge");
         }
         return newBorn;
