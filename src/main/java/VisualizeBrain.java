@@ -99,6 +99,7 @@ public class VisualizeBrain {
         Map<Pair<Integer, Integer>, Integer> occurences = new HashMap<>();
         Map<Integer, List<MyController.Edge>> outgoingEdges = controller.getOutgoingEdges();
         for (MyController.Neuron neuron : controller.getNodeSet()) {
+            occurences.clear();
             if (!neuron.isHidden()) {
                 continue;
             }
@@ -123,6 +124,9 @@ public class VisualizeBrain {
                     }
                 }
             }
+            if (occurences.containsKey(new Pair<>(neuron.getX(), neuron.getY()))) {
+                continue;
+            }
             Map.Entry<Pair<Integer, Integer>,Integer> maxEntry = null;
             for (Map.Entry<Pair<Integer, Integer>, Integer> entry : occurences.entrySet()) {
                 if (maxEntry == null || entry.getValue().compareTo(maxEntry.getValue()) > 0) {
@@ -135,7 +139,6 @@ public class VisualizeBrain {
                 List<Pair<Integer, Integer>> candidates = occurences.entrySet().stream().filter(e -> e.getValue().equals(finalMaxEntry.getValue())).map(Map.Entry::getKey).collect(Collectors.toList());
                 res.put(neuron.getIndex(), candidates.get(random.nextInt(candidates.size())));
             }
-            occurences.clear();
         }
         return res;
     }
