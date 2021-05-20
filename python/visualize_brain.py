@@ -24,7 +24,7 @@ class Drawer(object):
         for (u, v), w in edges.items():
             self.plot_arrow(nodes_positions[v], nodes_positions[u],
                             color="black" if is_not_crossing_edge(nodes[u]["x"], nodes[u]["y"],
-                                                                  nodes[v]["x"], nodes[v]["y"], self.shape) else "red", width=abs(w))
+                                                                  nodes[v]["x"], nodes[v]["y"], self.shape) else "red", width=w)
 
     def plot_rectangles(self):
         for x, voxel in enumerate(self.voxels):
@@ -113,7 +113,7 @@ def read_file(file_name):
             if row.edges:
                 # BE CAREFUL WITH OLD BRAINS
                 for e in row.edges.split("&"):
-                    edges[(row.index, int(e.split("/")[0]))] = float(e.split("/")[1])
+                    edges[(row.index, int(e.split("/")[0]))] = abs(float(e.split("/")[1])) + abs(float(e.split("/")[2]))
             entry = {"x": row.x, "y": row.y, "function": row.function, "type": row.type}
             nodes[row.index] = entry
             if entry["type"].startswith("SENSING"):

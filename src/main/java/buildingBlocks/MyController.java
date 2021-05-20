@@ -190,7 +190,7 @@ public class MyController implements Controller<SensingVoxel>, Sized {
            return String.join(",", String.valueOf(index),
                     String.valueOf(x),  String.valueOf(y), String.valueOf(function),
                     String.join("&", ingoingEdges.stream().map(e -> String.join("/",
-                            String.valueOf(e.getSource()), String.valueOf(e.getParams()[0]))).toArray(String[]::new)));
+                            String.valueOf(e.getSource()), String.valueOf(e.getParams()[0]), String.valueOf(e.getParams()[1]))).toArray(String[]::new)));
         }
 
         @Override

@@ -1,15 +1,17 @@
 import buildingBlocks.MyController;
+import geneticOps.TopologicalMutation;
 import it.units.erallab.hmsrobots.core.objects.Robot;
 import it.units.erallab.hmsrobots.util.RobotUtils;
 import it.units.erallab.hmsrobots.util.SerializationUtils;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.math3.util.Pair;
 
 import java.io.*;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import static it.units.malelab.jgea.core.util.Args.a;
 
@@ -68,18 +70,74 @@ public class VisualizeBrain {
         p.waitFor();
     }
 
-    private static void writeBrainToFile(Robot<?> robot, String outputName) throws IOException {
+    public static void writeBrainToFile(Robot<?> robot, String outputName) throws IOException {
+        writeBrainToFile((MyController) robot.getController(), outputName);
+    }
+
+    public static void writeBrainToFile(MyController controller, String outputName) throws IOException {
         BufferedWriter writer = new BufferedWriter(new FileWriter(outputName));
-        MyController controller = (MyController) robot.getController();
+        TopologicalMutation.pruneIsolatedNeurons(controller);
         writer.write("index,x,y,function,edges,type\n");
+        Map<Integer, Pair<Integer, Integer>> occ = postProcessNeuronPosition(controller);
         controller.getNodeSet().forEach(n -> {
             try {
-                writer.write(n.toString() + "\n");
+                String[] line = n.toString().split(",");
+                if (occ.containsKey(n.getIndex())) {
+                    line[1] = String.valueOf(occ.get(n.getIndex()).getFirst());
+                    line[2] = String.valueOf(occ.get(n.getIndex()).getSecond());
+                }
+                writer.write(String.join(",", line) + "\n");
             } catch (IOException e) {
                 e.printStackTrace();
             }
         });
         writer.close();
+    }
+
+    private static Map<Integer, Pair<Integer, Integer>> postProcessNeuronPosition(MyController controller) {
+        Map<Integer, Pair<Integer, Integer>> res = new HashMap<>();
+        Map<Pair<Integer, Integer>, Integer> occurences = new HashMap<>();
+        Map<Integer, List<MyController.Edge>> outgoingEdges = controller.getOutgoingEdges();
+        for (MyController.Neuron neuron : controller.getNodeSet()) {
+            if (!neuron.isHidden()) {
+                continue;
+            }
+            for (MyController.Edge edge : neuron.getIngoingEdges()) {
+                MyController.Neuron source = controller.getNodeMap().get(edge.getSource());
+                Pair<Integer, Integer> pos = new Pair<>(source.getX(), source.getY());
+                if (occurences.containsKey(pos)) {
+                    occurences.put(pos, occurences.get(pos) + 1);
+                }
+                else {
+                    occurences.put(pos, 1);
+                }
+            }
+            if (outgoingEdges.containsKey(neuron.getIndex())) {
+                for (MyController.Edge edge : outgoingEdges.get(neuron.getIndex())) {
+                    MyController.Neuron target = controller.getNodeMap().get(edge.getTarget());
+                    Pair<Integer, Integer> pos = new Pair<>(target.getX(), target.getY());
+                    if (occurences.containsKey(pos)) {
+                        occurences.put(pos, occurences.get(pos) + 1);
+                    } else {
+                        occurences.put(pos, 1);
+                    }
+                }
+            }
+            Map.Entry<Pair<Integer, Integer>,Integer> maxEntry = null;
+            for (Map.Entry<Pair<Integer, Integer>, Integer> entry : occurences.entrySet()) {
+                if (maxEntry == null || entry.getValue().compareTo(maxEntry.getValue()) > 0) {
+                    maxEntry = entry;
+                }
+            }
+            if (maxEntry != null) {
+                Random random = new Random(0);
+                Map.Entry<Pair<Integer, Integer>, Integer> finalMaxEntry = maxEntry;
+                List<Pair<Integer, Integer>> candidates = occurences.entrySet().stream().filter(e -> e.getValue().equals(finalMaxEntry.getValue())).map(Map.Entry::getKey).collect(Collectors.toList());
+                res.put(neuron.getIndex(), candidates.get(random.nextInt(candidates.size())));
+            }
+            occurences.clear();
+        }
+        return res;
     }
 
 }
