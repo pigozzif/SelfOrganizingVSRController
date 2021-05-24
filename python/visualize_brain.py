@@ -72,11 +72,11 @@ class Drawer(object):
             if attrs["type"] != "HIDDEN":
                 x, y = self.get_fixed_position(attrs, voxel_to_num_sensors)
                 nodes_positions[idx] = x, y
-                text = "SENS." if nodes[idx]["type"].startswith("SENSING") else "ACT."
+                text = str(idx)#"SENS." if nodes[idx]["type"].startswith("SENSING") else "ACT."
                 self.draw.ellipse([(x - self.node_size, y - self.node_size), (x + self.node_size, y + self.node_size)],
                                   outline="black", width=3, fill=func_to_color[attrs["function"]])
                 self.draw.text((x - font.getsize(text)[0] / 2, y - font.getsize(text)[1] / 2), text, font=font,
-                               fill="black")
+                               fill="red")
             else:
                 pos = attrs["x"], attrs["y"]
                 if pos not in hidden_nodes:
@@ -93,6 +93,9 @@ class Drawer(object):
                 nodes_positions[n[i]] = x, y
                 self.draw.ellipse([(x - self.node_size, y - self.node_size), (x + self.node_size, y + self.node_size)],
                                   outline="black", width=3, fill=func_to_color[nodes[n[i]]["function"]])
+                text = str(n[i])
+                self.draw.text((x - font.getsize(text)[0] / 2, y - font.getsize(text)[1] / 2), text, font=font,
+                               fill="red")
         return nodes_positions
 
     def save_image(self, file_name):
@@ -154,7 +157,7 @@ def main(input_file, output_file):
     node_size = 20
     blank_size = node_size * 2
     func_to_color = {"SIGMOID": "yellow", "RELU": "cyan", "TANH": "green", "SIN": "orange"}
-    font = ImageFont.truetype("/Library/Fonts/times_new_roman.ttf", 15)
+    font = ImageFont.truetype("/Library/Fonts/times_new_roman.ttf", 100)
     drawer = Drawer(voxels, voxel_size, node_size, pad, blank_size, "biped" if "biped" in input_file else "worm")
     drawer.plot_rectangles()
     nodes_positions = drawer.plot_nodes(nodes, font, func_to_color, voxel_to_num_sensors)

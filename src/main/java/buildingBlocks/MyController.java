@@ -10,7 +10,6 @@ import org.apache.commons.math3.util.Pair;
 
 import java.io.Serializable;
 import java.util.*;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -33,7 +32,7 @@ public class MyController implements Controller<SensingVoxel>, Sized {
         private boolean enabled;
         @JsonProperty
         public static int MAX_DELAY = 0;
-        private final int index;
+        private double length;
 
         @JsonCreator
         public Edge(@JsonProperty("weight") double w,
@@ -46,13 +45,22 @@ public class MyController implements Controller<SensingVoxel>, Sized {
             source = s;
             target = t;
             delay = d;
-            index = computeIndex(s, t);
             enabled = true;
+            length = -1.0;
         }
 
         public Edge(Edge other) {
             this(other.weight, other.bias, other.source, other.target, other.delay);
+            length = other.length;
         }
+
+        public void setLength(MyController controller) {
+            Neuron s = controller.getNodeMap().get(source);
+            Neuron t = controller.getNodeMap().get(target);
+            length = euclideanDistance(s, t);
+        }
+
+        public double getLength() { return length; }
         // TODO: decide whether to keep array alltogether
         public double[] getParams() { return new double[] { weight, bias }; }
 
@@ -73,20 +81,6 @@ public class MyController implements Controller<SensingVoxel>, Sized {
 
         public void setTarget(int newTarget) { target = newTarget; }
 
-        public int getIndex() { return index; }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            Edge edge = (Edge) o;
-            return index == edge.index;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(index);
-        }
     }
 
     @JsonIgnoreProperties(ignoreUnknown=true)
@@ -326,21 +320,23 @@ public class MyController implements Controller<SensingVoxel>, Sized {
 
     public Collection<Neuron> getNodeSet() { return this.nodes.values(); }
 
-    public Map<Integer, Edge> getEdgeMap() { return this.getEdgeSet().stream().collect(Collectors.toMap(Edge::getIndex, Function.identity()));}
     // TODO: would be nice to have Set or Collection
     public List<Edge> getEdgeSet() { return this.nodes.values().stream().flatMap(n -> n.getIngoingEdges().stream()).collect(Collectors.toList()); }
 
     public void addEdge(int source, int dest, double weight, double bias) {
         Edge edge = new Edge(weight, bias, source, dest, 0);
+        edge.setLength(this);
         this.nodes.get(dest).addIngoingEdge(edge);
     }
 
     public void copyEdge(Edge other) {
-        this.addEdge(other.getSource(), other.getTarget(), other.getParams()[0], other.getParams()[1]);
+        Edge edge = new Edge(other);
+        this.nodes.get(edge.getTarget()).addIngoingEdge(edge);
+        //this.addEdge(other.getSource(), other.getTarget(), other.getParams()[0], other.getParams()[1]);
     }
 
     public int copyNeuron(Neuron neuron, boolean copyEdges) {
-        int idx;// = /*this.nodes.size();*/neuron.getIndex();
+        int idx;
         Neuron newComer;
         if (neuron instanceof SensingNeuron) {
             idx = neuron.getIndex();
@@ -351,7 +347,7 @@ public class MyController implements Controller<SensingVoxel>, Sized {
             newComer = new ActuatorNeuron(idx, neuron.getX(), neuron.getY());
         }
         else if (neuron instanceof HiddenNeuron)  {
-            idx = this.nodes.size();//neuron.getIndex();
+            idx = this.nodes.size();
             newComer = new HiddenNeuron(idx, neuron.getActivation(), neuron.getX(), neuron.getY());
             if (this.nodes.containsKey(idx)) {
                 throw new IllegalArgumentException("Inserting already-present neuron: " + idx);
@@ -368,7 +364,7 @@ public class MyController implements Controller<SensingVoxel>, Sized {
     }
 
     public void addHiddenNode(int source, int dest, MultiLayerPerceptron.ActivationFunction a, int x, int y, Supplier<Double> parameterSupplier) {
-        int idx = /*computeIndex(source, dest);*/this.nodes.size();
+        int idx = this.nodes.size();
         Neuron newNode = new HiddenNeuron(idx, a, x, y);
         this.nodes.put(idx, newNode);
         this.addEdge(source, idx, parameterSupplier.get(), parameterSupplier.get());
@@ -468,10 +464,6 @@ public class MyController implements Controller<SensingVoxel>, Sized {
 
     public static int flattenCoord(int x, int y, int width) {
         return y * width + x;
-    }
-
-    public static int computeIndex(int first, int second) {
-        return Objects.hash(first, second);
     }
 
     public double getSumSquaredLengths() {

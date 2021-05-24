@@ -49,7 +49,7 @@ public class ValidationBuilder {
         return output;
     }
 
-    public Controller<?> parseIndividualFromFile(String fileName, Random random) {
+    public Controller<?> parseIndividualFromFile(String fileName, int iteration, Random random) {
         List<CSVRecord> records;
         List<String> headers;
         try {
@@ -66,7 +66,11 @@ public class ValidationBuilder {
         }
         SerializationUtils.Mode mode = SerializationUtils.Mode.valueOf(SerializationUtils.Mode.GZIPPED_JSON.name().toUpperCase());
         return RobotUtils.buildRobotTransformation(this.transformation, random)
-                .apply(SerializationUtils.deserialize(records.get(records.size() - 1).get(this.serializationColumn), Robot.class, mode)).getController();
+                .apply(SerializationUtils.deserialize(records.get((iteration == -1) ? records.size() - 1 : iteration).get(this.serializationColumn), Robot.class, mode)).getController();
+    }
+
+    public Controller<?> parseIndividualFromFile(String fileName, Random random) {
+        return this.parseIndividualFromFile(fileName, -1, random);
     }
 
     public Grid<Boolean> toBeCut(Grid<? extends SensingVoxel> body) {

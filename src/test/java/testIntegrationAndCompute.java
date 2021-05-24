@@ -48,23 +48,7 @@ public class testIntegrationAndCompute {
         MyController controller = getDefaultController();
         controller = (new AddNodeMutation(() -> 1.0)).mutate(controller, random);
         controller = (new AddEdgeMutation(() -> 1.0)).mutate(controller, random);
-        controller = (new MutateNode()).mutate(controller, random);
         controller = (new MutateEdge(0.1, 0.0)).mutate(controller, random);
-        Robot<?> testRobot = new Robot<>(controller, (new WormMorphology(5, 5, "vel-area-touch")).getBody());
-        Function<Robot<?>, Outcome> trainingTask = new Locomotion(episodeTime, Locomotion.createTerrain("flat"), physicsSettings);
-        trainingTask.apply(testRobot);
-    }
-
-    @Test(expected=Test.None.class /* no exception expected */)
-    public void testSubsistenceWithMutationsAndCrossover() {
-        double episodeTime = 30.0;
-        Settings physicsSettings = new Settings();
-        MyController controller = getDefaultController();
-        controller = (new AddNodeMutation(() -> 1.0)).mutate(controller, random);
-        controller = (new AddEdgeMutation(() -> 1.0)).mutate(controller, random);
-        controller = (new MutateNode()).mutate(controller, random);
-        controller = (new MutateEdge(0.1, 0.0)).mutate(controller, random);
-        controller = (new CrossoverWithDonation("traditional").recombine(controller, getIdentityController(), random));
         Robot<?> testRobot = new Robot<>(controller, (new WormMorphology(5, 5, "vel-area-touch")).getBody());
         Function<Robot<?>, Outcome> trainingTask = new Locomotion(episodeTime, Locomotion.createTerrain("flat"), physicsSettings);
         trainingTask.apply(testRobot);
