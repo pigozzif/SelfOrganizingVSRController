@@ -32,7 +32,6 @@ public class MyController implements Controller<SensingVoxel>, Sized {
         private boolean enabled;
         @JsonProperty
         public static int MAX_DELAY = 0;
-        private double length;
 
         @JsonCreator
         public Edge(@JsonProperty("weight") double w,
@@ -46,21 +45,12 @@ public class MyController implements Controller<SensingVoxel>, Sized {
             target = t;
             delay = d;
             enabled = true;
-            length = -1.0;
         }
 
         public Edge(Edge other) {
             this(other.weight, other.bias, other.source, other.target, other.delay);
-            length = other.length;
         }
 
-        public void setLength(MyController controller) {
-            Neuron s = controller.getNodeMap().get(source);
-            Neuron t = controller.getNodeMap().get(target);
-            length = euclideanDistance(s, t);
-        }
-
-        public double getLength() { return length; }
         // TODO: decide whether to keep array alltogether
         public double[] getParams() { return new double[] { weight, bias }; }
 
@@ -325,7 +315,6 @@ public class MyController implements Controller<SensingVoxel>, Sized {
 
     public void addEdge(int source, int dest, double weight, double bias) {
         Edge edge = new Edge(weight, bias, source, dest, 0);
-        edge.setLength(this);
         this.nodes.get(dest).addIngoingEdge(edge);
     }
 
@@ -410,6 +399,16 @@ public class MyController implements Controller<SensingVoxel>, Sized {
             }
         }
         return out;
+    }
+
+    public List<Edge> getAllEdges(Neuron neuron) {
+        List<Edge> edges = neuron.getIngoingEdges();
+        for (Edge edge : this.getEdgeSet()) {
+            if (edge.getSource() == neuron.getIndex() && edge.getTarget() != neuron.getIndex()) {
+                edges.add(edge);
+            }
+        }
+        return edges;
     }
 
     public void removeEdge(Edge edge) {

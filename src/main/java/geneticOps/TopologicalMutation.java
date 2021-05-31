@@ -2,18 +2,16 @@ package geneticOps;
 
 import buildingBlocks.MyController;
 import it.units.malelab.jgea.core.operator.Mutation;
+import org.apache.commons.math3.util.Pair;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 
 public interface TopologicalMutation extends Mutation<MyController> {
 
     static double getMaxDist(String dist) {
         return switch (dist) {
-            case "minimal" -> 1.0;
+            case "minimal" -> 0.0;
             case "full" -> Double.MAX_VALUE;
             default -> throw new IllegalArgumentException("Connectivity not known: " + dist);
         };
@@ -49,6 +47,92 @@ public interface TopologicalMutation extends Mutation<MyController> {
             }
         }
         visitedNeurons.forEach(controller::removeNeuron);
+    }
+
+    static List<Pair<Integer, Integer>> selectBestModule(MyController controller, int minSize, int maxSize) {
+        Pair<Integer, Integer>[] voxels = controller.getValidCoordinates();
+        List<List<Pair<Integer, Integer>>> subsets = new ArrayList<>();
+        for (int i=minSize; i <= maxSize; ++i) {
+            subsets.addAll(subSets(voxels, i));
+        }
+        return subsets.stream().min(Comparator.comparingDouble(x -> countCrossingEdgesWeight(x, controller) / countNotCrossingEdgesWeight(x, controller))).get();
+    }
+
+    static <T> List<List<T>> subSets(T[] list, int size) {
+        List<List<T>> out = new ArrayList<>();
+        for (int i=0; i < list.length - size + 1; ++i) {
+            List<T> subset = new ArrayList<>(Arrays.asList(list).subList(i, i + size - 1));
+            if (!(size == 1 && i > 0)) {
+                for (int j=i + size - 1;j < list.length; ++j) {
+                    List<T> newSubset = new ArrayList<>(subset);
+                    newSubset.add(list[j]);
+                    if (isContigousSubset(newSubset.toArray(Pair[]::new))) {
+                        out.add(newSubset);
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
+    static boolean isContigousSubset(Pair<Integer, Integer>[] subset) {
+        Set<Pair<Integer, Integer>> visited = new HashSet<>();
+        Queue<Pair<Integer, Integer>> queue = new LinkedList<>();
+        Set<Pair<Integer, Integer>> toVisit = new HashSet<>(Arrays.asList(subset));
+        queue.add(subset[0]);
+        while (!queue.isEmpty()) {
+            Pair<Integer, Integer> current = queue.remove();
+            visited.add(current);
+            int x1 = current.getFirst();
+            int y1 = current.getSecond();
+            for (int i : new int[]{1, -1}) {
+                Pair<Integer, Integer> candidate = new Pair<>(x1, y1 + i);
+                if (!visited.contains(candidate) && toVisit.contains(candidate)) {
+                    queue.add(candidate);
+                }
+                candidate = new Pair<>(x1 + i, y1);
+                if (!visited.contains(candidate) && toVisit.contains(candidate)) {
+                    queue.add(candidate);
+                }
+            }
+        }
+        return visited.size() == subset.length;
+    }
+
+    static double countCrossingEdgesWeight(List<Pair<Integer, Integer>> subset, MyController controller) {
+        double sum = 0.0;
+        for (MyController.Edge edge : controller.getEdgeSet()) {
+            MyController.Neuron source = controller.getNodeMap().get(edge.getSource());
+            MyController.Neuron target = controller.getNodeMap().get(edge.getTarget());
+            Pair<Integer, Integer> sourcePair = new Pair<>(source.getX(), source.getY());
+            Pair<Integer, Integer> targetPair = new Pair<>(target.getX(), target.getY());
+            if ((subset.contains(sourcePair) && !subset.contains(targetPair)) ||
+                    (subset.contains(targetPair) && !(subset.contains(sourcePair)))) {
+                sum += Math.abs(edge.getParams()[0]) + Math.abs(edge.getParams()[1]);
+            }
+        }
+        return sum;
+    }
+
+    static double countNotCrossingEdgesWeight(List<Pair<Integer, Integer>> subset, MyController controller) {
+        double sum = 0.0;
+        for (MyController.Edge edge : controller.getEdgeSet()) {
+            MyController.Neuron source = controller.getNodeMap().get(edge.getSource());
+            MyController.Neuron target = controller.getNodeMap().get(edge.getTarget());
+            Pair<Integer, Integer> sourcePair = new Pair<>(source.getX(), source.getY());
+            Pair<Integer, Integer> targetPair = new Pair<>(target.getX(), target.getY());
+            if ((subset.contains(sourcePair) && subset.contains(targetPair))) {
+                sum += Math.abs(edge.getParams()[0]) + Math.abs(edge.getParams()[1]);
+            }
+        }
+        return sum;
+    }
+
+    static boolean areCrossingModule(List<Pair<Integer, Integer>> module, MyController.Neuron source, MyController.Neuron target) {
+        Pair<Integer, Integer> sourcePair = new Pair<>(source.getX(), source.getY());
+        Pair<Integer, Integer> targetPair = new Pair<>(target.getX(), target.getY());
+        return (module.contains(sourcePair) && !module.contains(targetPair)) ||
+                (module.contains(targetPair) && !module.contains(sourcePair));
     }
 
 }

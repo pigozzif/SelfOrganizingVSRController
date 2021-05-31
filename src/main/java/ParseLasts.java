@@ -1,9 +1,8 @@
 import buildingBlocks.MyController;
+import geneticOps.TopologicalMutation;
 import validation.ValidationBuilder;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +12,7 @@ import java.util.Random;
 
 public class ParseLasts {
 
-    private static final File dir = new File("/Users/federicopigozzi/Downloads/all_results/");
+    private static final File dir = new File("/Users/federicopigozzi/Downloads/small_world_attachment/");
 
     public static void main(String[] args) throws IOException {
         List<File> bestFiles = new ArrayList<>();

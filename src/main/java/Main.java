@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import buildingBlocks.Elitism;
 import buildingBlocks.factories.ControllerFactory;
 import buildingBlocks.MyController;
 import buildingBlocks.RobotMapper;
@@ -32,11 +33,13 @@ import it.units.malelab.jgea.core.evolver.Evolver;
 import it.units.malelab.jgea.core.evolver.StandardEvolver;
 import it.units.malelab.jgea.core.evolver.stopcondition.Births;
 import it.units.malelab.jgea.core.listener.*;
+import it.units.malelab.jgea.core.operator.GeneticOperator;
 import it.units.malelab.jgea.core.order.PartialComparator;
 import it.units.malelab.jgea.core.selector.Tournament;
 import it.units.malelab.jgea.core.selector.Worst;
 import it.units.malelab.jgea.core.util.*;
 import morphologies.Morphology;
+import org.apache.commons.math3.util.Pair;
 import org.dyn4j.dynamics.Settings;
 import validation.*;
 
@@ -111,14 +114,17 @@ public class Main extends Worker {
             //summarize params
             L.info(String.format("Starting evolution with %s", this.bestFileName));
             //start iterations
-            this.performEvolution(this.prepareListenerFactory(), basicFactory);
+            this.performEvolution(this.prepareListenerFactory(), basicFactory, Map.of(new AddNodeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.3, new AddEdgeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.2, new MutateEdge(0.7, 0.0), 0.5));
         }
         else {
             //summarize params
             L.info(String.format("Starting validation with %s", this.bestFileName));
             //start iterations
+            MyController controller = (MyController) (new ValidationBuilder(this.targetShapeName, "fixed", "rewiring")).parseIndividualFromFile(this.getDonator(), 1500, this.seed);
+            List<Pair<Integer, Integer>> module = TopologicalMutation.selectBestModule(controller, 2, 5);
             this.performEvolution(this.prepareListenerFactory(), new ValidationFactory(1.0, Map.of(new AddNodeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.3, new AddEdgeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.2, new MutateEdge(0.7, 0.0), 0.5),
-                    (new ValidationBuilder(this.targetShapeName, "fixed", "rewiring")).buildValidation(this.getDonator(), this.getReceiver(), this.morph.getBody(), this.seed), basicFactory));
+                    controller, basicFactory),//(new ValidationBuilder(this.targetShapeName, "fixed", "rewiring")).buildValidation(this.getDonator(), this.getReceiver(), this.morph.getBody(), this.seed), basicFactory),
+                    Map.of(new AddBoundedEdgeMutation(this.parameterSupplier, 0.0, this.connectivity, this.targetShapeName, this.configuration, module), 0.3, new MutateEdge(0.7, 0.0), 0.7));
         }
     }
 
@@ -201,14 +207,14 @@ public class Main extends Worker {
     }
 
     private void performEvolution(Listener.Factory<Event<?, ? extends Robot<?>, ? extends Outcome>> listenerFactory,
-                                  Factory<MyController> genotypeFactory) {
+                                  Factory<MyController> genotypeFactory, Map<GeneticOperator<MyController>, Double> genOps) {
         for (String terrainName : this.terrainNames) {
             for (String transformationName : this.transformationNames) {
                 //build evolver
                 RobotMapper mapper = new RobotMapper(this.morph.getBody());
                 Evolver<MyController, Robot<?>, Outcome> evolver = new StandardEvolver<>(mapper, genotypeFactory, PartialComparator.from(Double.class).reversed().comparing(i -> i.getFitness().getVelocity()),
-                        this.popSize, Map.of(new AddNodeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.3, new AddEdgeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.2, new MutateEdge(0.7, 0.0), 0.5),// new CrossoverWithDonation("growing"), 0.1),// new MutateNode(), 0.25),
-                        new Tournament(5), new Worst(), this.popSize, true, true);
+                        this.popSize, genOps,
+                        new Elitism()/*new Tournament(5)*/, new Worst(), this.popSize, true, true);
                 Listener<Event<?, ? extends Robot<?>, ? extends Outcome>> listener = Listener.all(List.of(listenerFactory.build()));
                 //optimize
                 Stopwatch stopwatch = Stopwatch.createStarted();

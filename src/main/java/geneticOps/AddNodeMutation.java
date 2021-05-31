@@ -12,11 +12,11 @@ import java.util.stream.Collectors;
 
 public class AddNodeMutation implements TopologicalMutation {
 
-    private final Supplier<Double> parameterSupplier;
-    private final double perc;
-    private final double maxDist;
-    private final String morphology;
-    private final String configuration;
+    protected final Supplier<Double> parameterSupplier;
+    protected final double perc;
+    protected final double maxDist;
+    protected final String morphology;
+    protected final String configuration;
 
     public AddNodeMutation(Supplier<Double> sup, double p, String dist, String morph, String conf) {
         this.parameterSupplier = sup;
@@ -43,12 +43,12 @@ public class AddNodeMutation implements TopologicalMutation {
         else {
             this.disableMutation(newBorn, random);
             TopologicalMutation.pruneIsolatedNeurons(newBorn);
-            newBorn.setOrigin("remove_edge");
+            newBorn.setOrigin("remove_node");
         }
         return newBorn;
     }
 
-    private void enableMutation(MyController controller, int sampleX, int sampleY, Random random) {
+    protected void enableMutation(MyController controller, int sampleX, int sampleY, Random random) {
         List<MyController.Neuron> candidates = controller.getNodeSet().stream().filter(n -> MyController.euclideanDistance(sampleX, sampleY, n.getX(), n.getY()) <= this.maxDist)
                 .collect(Collectors.toList());
         Pair<Integer, Integer> trial = this.pickPair(candidates, random);
@@ -69,7 +69,7 @@ public class AddNodeMutation implements TopologicalMutation {
         return Misc.pickRandomly(nodes, random);
     }
 
-    private void disableMutation(MyController controller, Random random) {
+    public void disableMutation(MyController controller, Random random) {
         List<MyController.Neuron> candidates = controller.getNodeSet().stream().filter(MyController.Neuron::isHidden).collect(Collectors.toList());
         if (candidates.isEmpty()) {
             return;

@@ -10,11 +10,11 @@ import java.util.function.Supplier;
 
 public class AddEdgeMutation implements TopologicalMutation {
     // TODO: maybe use validator object instead of string
-    private final Supplier<Double> parameterSupplier;
-    private final double perc;
-    private final double maxDist;
-    private final String morphology;
-    private final String configuration;
+    protected final Supplier<Double> parameterSupplier;
+    protected final double perc;
+    protected final double maxDist;
+    protected final String morphology;
+    protected final String configuration;
 
     public AddEdgeMutation(Supplier<Double> s, double p, String dist, String morph, String conf) {
         this.parameterSupplier = s;
@@ -43,7 +43,7 @@ public class AddEdgeMutation implements TopologicalMutation {
         return newBorn;
     }
 
-    private void enableMutation(MyController controller, Random random) {
+    public void enableMutation(MyController controller, Random random) {
         Map<Pair<Integer, Integer>, Double> nodes = new HashMap<>();
         double[] probs = TopologicalMutation.getEdgeProbs(this.configuration);
         for (MyController.Neuron n1 : controller.getNodeSet()) {
@@ -61,7 +61,7 @@ public class AddEdgeMutation implements TopologicalMutation {
         controller.addEdge(chosenOne.getFirst(), chosenOne.getSecond(), this.parameterSupplier.get(), this.parameterSupplier.get());
     }
 
-    private void disableMutation(MyController controller, Random random) {
+    public void disableMutation(MyController controller, Random random) {
         List<MyController.Edge> edges = controller.getEdgeSet();
         MyController.Edge candidate = edges.get(random.nextInt(edges.size()));
         controller.removeEdge(candidate);
