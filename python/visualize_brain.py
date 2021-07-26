@@ -24,7 +24,7 @@ class Drawer(object):
         for (u, v), w in edges.items():
             self.plot_arrow(nodes_positions[v], nodes_positions[u],
                             color="black" if is_not_crossing_edge(nodes[u]["x"], nodes[u]["y"],
-                                                                  nodes[v]["x"], nodes[v]["y"], self.shape) else "red", width=w)
+                                                                  nodes[v]["x"], nodes[v]["y"], self.shape) else "black", width=w)
 
     def plot_rectangles(self):
         for x, voxel in enumerate(self.voxels):
@@ -33,7 +33,7 @@ class Drawer(object):
                                   self.pad + self.voxel_size * y + self.blank_size * y),
                                  (self.pad + self.voxel_size * x + self.blank_size * x,
                                   self.pad + self.voxel_size * (y + 1) + self.blank_size * y)],
-                                outline="blue", width=10, fill="white")
+                                outline="blue" if (x, y) not in [(3, 0), (3, 1)] else "red", width=10, fill="white")
 
     def plot_arrow(self, pt_a, pt_b, width, color="black"):
         self.draw.line((pt_a, pt_b), width=int(width * 5), fill=color)
@@ -75,8 +75,8 @@ class Drawer(object):
                 text = str(idx)#"SENS." if nodes[idx]["type"].startswith("SENSING") else "ACT."
                 self.draw.ellipse([(x - self.node_size, y - self.node_size), (x + self.node_size, y + self.node_size)],
                                   outline="black", width=3, fill=func_to_color[attrs["function"]])
-                self.draw.text((x - font.getsize(text)[0] / 2, y - font.getsize(text)[1] / 2), text, font=font,
-                               fill="red")
+                #self.draw.text((x - font.getsize(text)[0] / 2, y - font.getsize(text)[1] / 2), text, font=font,
+                #               fill="red")
             else:
                 pos = attrs["x"], attrs["y"]
                 if pos not in hidden_nodes:
@@ -94,8 +94,8 @@ class Drawer(object):
                 self.draw.ellipse([(x - self.node_size, y - self.node_size), (x + self.node_size, y + self.node_size)],
                                   outline="black", width=3, fill=func_to_color[nodes[n[i]]["function"]])
                 text = str(n[i])
-                self.draw.text((x - font.getsize(text)[0] / 2, y - font.getsize(text)[1] / 2), text, font=font,
-                               fill="red")
+                #self.draw.text((x - font.getsize(text)[0] / 2, y - font.getsize(text)[1] / 2), text, font=font,
+                #               fill="red")
         return nodes_positions
 
     def save_image(self, file_name):

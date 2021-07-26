@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import buildingBlocks.Elitism;
 import buildingBlocks.factories.ControllerFactory;
 import buildingBlocks.MyController;
 import buildingBlocks.RobotMapper;
@@ -39,7 +38,6 @@ import it.units.malelab.jgea.core.selector.Tournament;
 import it.units.malelab.jgea.core.selector.Worst;
 import it.units.malelab.jgea.core.util.*;
 import morphologies.Morphology;
-import org.apache.commons.math3.util.Pair;
 import org.dyn4j.dynamics.Settings;
 import validation.*;
 
@@ -53,9 +51,7 @@ import java.util.stream.Collectors;
 import static it.units.malelab.jgea.core.listener.NamedFunctions.*;
 import static it.units.malelab.jgea.core.util.Args.*;
 
-/**
- * @author eric
- */
+
 public class Main extends Worker {
 
     private final static Settings PHYSICS_SETTINGS = new Settings();
@@ -120,11 +116,11 @@ public class Main extends Worker {
             //summarize params
             L.info(String.format("Starting validation with %s", this.bestFileName));
             //start iterations
-            MyController controller = (MyController) (new ValidationBuilder(this.targetShapeName, "fixed", "rewiring")).parseIndividualFromFile(this.getDonator(), 1500, this.seed);
-            List<Pair<Integer, Integer>> module = TopologicalMutation.selectBestModule(controller, 2, 5);
+            //MyController controller = (MyController) (new ValidationBuilder(this.targetShapeName, "fixed", "rewiring")).parseIndividualFromFile(this.getDonator(), 1500, this.seed);
+            //List<Pair<Integer, Integer>> module = TopologicalMutation.selectBestModule(controller, 2, 5);
             this.performEvolution(this.prepareListenerFactory(), new ValidationFactory(1.0, Map.of(new AddNodeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.3, new AddEdgeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.2, new MutateEdge(0.7, 0.0), 0.5),
-                    controller, basicFactory),//(new ValidationBuilder(this.targetShapeName, "fixed", "rewiring")).buildValidation(this.getDonator(), this.getReceiver(), this.morph.getBody(), this.seed), basicFactory),
-                    Map.of(new AddBoundedEdgeMutation(this.parameterSupplier, 0.0, this.connectivity, this.targetShapeName, this.configuration, module), 0.3, new MutateEdge(0.7, 0.0), 0.7));
+                    /*controller, basicFactory),*/(new ValidationBuilder(this.targetShapeName, "fixed", "rewiring")).buildValidation(this.getDonator(), this.getReceiver(), this.morph.getBody(), this.seed), basicFactory),
+                    Map.of(new AddNodeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.3, new AddEdgeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.2, new MutateEdge(0.7, 0.0), 0.5));
         }
     }
 
@@ -154,11 +150,11 @@ public class Main extends Worker {
     }
 
     private String getDonator() {
-        return dir + String.join(".", "best", String.valueOf(this.s), this.targetShapeName, this.configuration, "csv");
+        return dir + String.join(".", "best", String.valueOf(this.s), "biped-4x3", this.configuration, "csv");
     }
 
     private String getReceiver() {
-        return dir + String.join(".", "best", String.valueOf((this.s == 4) ? 0 : this.s + 1), this.targetShapeName, this.configuration, "csv");
+        return dir + String.join(".", "best", String.valueOf(this.s)/*String.valueOf((this.s == 4) ? 0 : this.s + 1)*/, "worm-6x2", this.configuration, "csv");
     }
     // TODO: could be called directly inside the evolution
     private Listener.Factory<Event<?, ? extends Robot<?>, ? extends Outcome>> prepareListenerFactory() {
@@ -169,7 +165,6 @@ public class Main extends Worker {
         List<NamedFunction<Individual<?, ? extends Robot<?>, ? extends Outcome>, ?>> individualFunctions = Utils.individualFunctions(fitnessFunction);
         List<NamedFunction<Outcome, ?>> basicOutcomeFunctions = Utils.basicOutcomeFunctions();
         Listener.Factory<Event<?, ? extends Robot<?>, ? extends Outcome>> factory = Listener.Factory.deaf();
-        //screen listener
         //file listeners
         if (this.bestFileName != null) {
             factory = factory.and(new CSVPrinter<>(Misc.concat(List.of(
@@ -214,7 +209,7 @@ public class Main extends Worker {
                 RobotMapper mapper = new RobotMapper(this.morph.getBody());
                 Evolver<MyController, Robot<?>, Outcome> evolver = new StandardEvolver<>(mapper, genotypeFactory, PartialComparator.from(Double.class).reversed().comparing(i -> i.getFitness().getVelocity()),
                         this.popSize, genOps,
-                        new Elitism()/*new Tournament(5)*/, new Worst(), this.popSize, true, true);
+                        new Tournament(5), new Worst(), this.popSize, true, true);
                 Listener<Event<?, ? extends Robot<?>, ? extends Outcome>> listener = Listener.all(List.of(listenerFactory.build()));
                 //optimize
                 Stopwatch stopwatch = Stopwatch.createStarted();

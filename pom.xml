@@ -4,20 +4,25 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.example</groupId>
-    <artifactId>test</artifactId>
+    <groupId>it.units.erallab</groupId>
+    <artifactId>SelfOrganisingController</artifactId>
     <version>1.0</version>
+    <packaging>jar</packaging>
 
     <dependencies>
         <dependency>
             <groupId>it.units.erallab</groupId>
             <artifactId>TwoDimHighlyModularSoftRobots</artifactId>
-            <version>1.9.1</version>
+            <version>1.9.2</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/libs/TwoDimHighlyModularSoftRobots.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>it.units.malelab</groupId>
             <artifactId>JGEA</artifactId>
             <version>1.7.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/libs/JGEA.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.apache.maven.plugins</groupId>

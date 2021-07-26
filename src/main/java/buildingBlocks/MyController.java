@@ -360,22 +360,6 @@ public class MyController implements Controller<SensingVoxel>, Sized {
         this.addEdge(idx, dest, parameterSupplier.get(), parameterSupplier.get());
     }
 
-    public void splitEdge(Edge edge, Supplier<Double> parameterSupplier, Random random) {
-        int source = edge.getSource();
-        int target = edge.getTarget();
-        int x, y;
-        if (random.nextBoolean()) {
-            x = this.nodes.get(source).getX();
-            y = this.nodes.get(source).getY();
-        }
-        else {
-            x = this.nodes.get(target).getX();
-            y = this.nodes.get(target).getY();
-        }
-        this.addHiddenNode(source, target, MultiLayerPerceptron.ActivationFunction.SIGMOID, x, y, parameterSupplier);
-        this.removeEdge(edge);
-    }
-
     public void addActuatorNode(int x, int y) {
         int idx = this.nodes.size();
         Neuron newNode = new ActuatorNeuron(idx, x, y);
