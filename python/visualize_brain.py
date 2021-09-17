@@ -5,6 +5,7 @@ from collections import namedtuple
 import sys
 import os
 import re
+import csv
 
 
 class Drawer(object):
@@ -19,12 +20,13 @@ class Drawer(object):
                                        (pad * 2) + (voxel_size * (max(voxels, key=lambda x: x[1])[1] + 1))), "white")
         self.draw = ImageDraw.Draw(self.image)
         self.shape = shape
+        self.module = set([])
 
     def plot_edges(self, edges, nodes_positions, nodes):
         for (u, v), w in edges.items():
             self.plot_arrow(nodes_positions[v], nodes_positions[u],
                             color="black" if is_not_crossing_edge(nodes[u]["x"], nodes[u]["y"],
-                                                                  nodes[v]["x"], nodes[v]["y"], self.shape) else "black", width=w)
+                                                                  nodes[v]["x"], nodes[v]["y"], self.shape) else "black", width=1)
 
     def plot_rectangles(self):
         for x, voxel in enumerate(self.voxels):
@@ -33,9 +35,9 @@ class Drawer(object):
                                   self.pad + self.voxel_size * y + self.blank_size * y),
                                  (self.pad + self.voxel_size * x + self.blank_size * x,
                                   self.pad + self.voxel_size * (y + 1) + self.blank_size * y)],
-                                outline="blue" if (x, y) not in [(3, 0), (3, 1)] else "red", width=10, fill="white")
+                                outline="blue" if (x, y) not in self.module else "red", width=10, fill="white")
 
-    def plot_arrow(self, pt_a, pt_b, width, color="black"):
+    def plot_arrow(self, pt_a, pt_b, width, color=(0, 0, 0, int(0.75 * 255))):
         self.draw.line((pt_a, pt_b), width=int(width * 5), fill=color)
         x0, y0 = pt_a
         x1, y1 = pt_b
@@ -72,11 +74,8 @@ class Drawer(object):
             if attrs["type"] != "HIDDEN":
                 x, y = self.get_fixed_position(attrs, voxel_to_num_sensors)
                 nodes_positions[idx] = x, y
-                text = str(idx)#"SENS." if nodes[idx]["type"].startswith("SENSING") else "ACT."
                 self.draw.ellipse([(x - self.node_size, y - self.node_size), (x + self.node_size, y + self.node_size)],
-                                  outline="black", width=3, fill=func_to_color[attrs["function"]])
-                #self.draw.text((x - font.getsize(text)[0] / 2, y - font.getsize(text)[1] / 2), text, font=font,
-                #               fill="red")
+                                  outline="black", width=3, fill=self.get_node_color(attrs["type"]))
             else:
                 pos = attrs["x"], attrs["y"]
                 if pos not in hidden_nodes:
@@ -92,14 +91,25 @@ class Drawer(object):
                 y = (y * self.voxel_size) + (self.pad + self.voxel_size * pos[1] + self.blank_size * pos[1])
                 nodes_positions[n[i]] = x, y
                 self.draw.ellipse([(x - self.node_size, y - self.node_size), (x + self.node_size, y + self.node_size)],
-                                  outline="black", width=3, fill=func_to_color[nodes[n[i]]["function"]])
-                text = str(n[i])
-                #self.draw.text((x - font.getsize(text)[0] / 2, y - font.getsize(text)[1] / 2), text, font=font,
-                #               fill="red")
+                                  outline="black", width=3, fill=self.get_node_color(nodes[n[i]]["type"]))
         return nodes_positions
+
+    def get_node_color(self, t):
+        if t.startswith("SENSING"):
+            return 55, 126, 184
+        elif t == "ACTUATOR":
+            return 228, 26, 28
+        return 77, 175, 74
 
     def save_image(self, file_name):
         self.image.save(file_name)
+
+    def init_module(self, path):
+        with open(path, "r") as file:
+            reader = csv.reader(file)
+            next(reader)
+            for line in reader:
+                self.module.add((int(line[0]), (2 if "biped" in line[2] else 1) - int(line[1])))
 
 
 def read_file(file_name):
@@ -114,7 +124,6 @@ def read_file(file_name):
             line = line.split(",")
             row = Row(int(line[0]), int(line[1]), int(line[2]), line[3], line[4], line[5].strip("\n"))
             if row.edges:
-                # BE CAREFUL WITH OLD BRAINS
                 for e in row.edges.split("&"):
                     edges[(row.index, int(e.split("/")[0]))] = abs(float(e.split("/")[1])) + abs(float(e.split("/")[2]))
             entry = {"x": row.x, "y": row.y, "function": row.function, "type": row.type}
@@ -159,11 +168,16 @@ def main(input_file, output_file):
     func_to_color = {"SIGMOID": "yellow", "RELU": "cyan", "TANH": "green", "SIN": "orange"}
     font = ImageFont.truetype("/Library/Fonts/times_new_roman.ttf", 100)
     drawer = Drawer(voxels, voxel_size, node_size, pad, blank_size, "biped" if "biped" in input_file else "worm")
+    module_path = "/Users/federicopigozzi/Desktop/PhD/SelfOrganizingController/best_module.txt"
+    if os.path.exists(module_path):
+        drawer.init_module(module_path)
     drawer.plot_rectangles()
     nodes_positions = drawer.plot_nodes(nodes, font, func_to_color, voxel_to_num_sensors)
     drawer.plot_edges(edges, nodes_positions, nodes)
-    os.remove(input_file)
     drawer.save_image(output_file)
+    os.remove(input_file)
+    if os.path.exists(module_path):
+        os.remove(module_path)
 
 
 if __name__ == "__main__":

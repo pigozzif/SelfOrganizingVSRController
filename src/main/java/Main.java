@@ -38,6 +38,7 @@ import it.units.malelab.jgea.core.selector.Tournament;
 import it.units.malelab.jgea.core.selector.Worst;
 import it.units.malelab.jgea.core.util.*;
 import morphologies.Morphology;
+import org.apache.commons.math3.util.Pair;
 import org.dyn4j.dynamics.Settings;
 import validation.*;
 
@@ -51,7 +52,7 @@ import java.util.stream.Collectors;
 import static it.units.malelab.jgea.core.listener.NamedFunctions.*;
 import static it.units.malelab.jgea.core.util.Args.*;
 
-
+// TODO: think about specialization hierarchy for Main classes
 public class Main extends Worker {
 
     private final static Settings PHYSICS_SETTINGS = new Settings();
@@ -71,7 +72,7 @@ public class Main extends Worker {
     public static final int CACHE_SIZE = 0;
     public static final String SEQUENCE_SEPARATOR_CHAR = ">";
     public static final String SEQUENCE_ITERATION_CHAR = ":";
-    private static final String dir = "./output/";
+    private static final String dir = "./output/";//""/Users/federicopigozzi/Downloads/mega_experiment/";
     private double episodeTime;
     private double episodeTransientTime;
     private double validationEpisodeTime;
@@ -93,6 +94,7 @@ public class Main extends Worker {
     private boolean validationFlag;
     private String connectivity;
     private String configuration;
+    private boolean isResumed;
 
     public Main(String[] args) {
         super(args);
@@ -116,11 +118,19 @@ public class Main extends Worker {
             //summarize params
             L.info(String.format("Starting validation with %s", this.bestFileName));
             //start iterations
-            //MyController controller = (MyController) (new ValidationBuilder(this.targetShapeName, "fixed", "rewiring")).parseIndividualFromFile(this.getDonator(), 1500, this.seed);
-            //List<Pair<Integer, Integer>> module = TopologicalMutation.selectBestModule(controller, 2, 5);
-            this.performEvolution(this.prepareListenerFactory(), new ValidationFactory(1.0, Map.of(new AddNodeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.3, new AddEdgeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.2, new MutateEdge(0.7, 0.0), 0.5),
-                    /*controller, basicFactory),*/(new ValidationBuilder(this.targetShapeName, "fixed", "rewiring")).buildValidation(this.getDonator(), this.getReceiver(), this.morph.getBody(), this.seed), basicFactory),
-                    Map.of(new AddNodeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.3, new AddEdgeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.2, new MutateEdge(0.7, 0.0), 0.5));
+            ValidationBuilder builder = new ValidationBuilder(this.targetShapeName, "fixed", "rewiring");
+            if (this.isResumed) {
+                MyController controller = (MyController) builder.parseIndividualFromFile(this.getToBeResumed(), 1500, this.seed);
+                List<Pair<Integer, Integer>> module = TopologicalMutation.selectBestModule(controller, 2, 5);
+                this.performEvolution(this.prepareListenerFactory(), new ValidationFactory(1.0, Map.of(new AddNodeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.3, new AddEdgeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.2, new MutateEdge(0.7, 0.0), 0.5),
+                                controller, basicFactory),
+                        Map.of(/*new AddBoundedNodeMutation(this.parameterSupplier, 0.0, this.connectivity, this.targetShapeName, this.configuration, module), 0.3,*/ new AddBoundedEdgeMutation(this.parameterSupplier, 0.0, this.connectivity, this.targetShapeName, this.configuration, module), 0.5, new MutateEdge(0.7, 0.0), 0.5));
+            }
+            else {
+                this.performEvolution(this.prepareListenerFactory(), new ValidationFactory(1.0, Map.of(new AddNodeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.3, new AddEdgeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.2, new MutateEdge(0.7, 0.0), 0.5),
+                                builder.buildValidation(this.getDonator(), this.getReceiver(), this.morph.getBody(), this.seed), basicFactory),
+                        Map.of(new AddNodeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.3, new AddEdgeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.2, new MutateEdge(0.7, 0.0), 0.5));
+            }
         }
     }
 
@@ -142,7 +152,8 @@ public class Main extends Worker {
         this.transformationNames = l(a("transformation", "identity"));
         this.validationFlag = Boolean.parseBoolean(a("validation", "false"));
         this.configuration = a("configuration", null);
-        this.bestFileName = a("bestFile", dir + String.join(".", (validationFlag) ? "validation" : "best", String.valueOf(s), this.targetShapeName, this.configuration, "csv"));
+        this.isResumed = Boolean.parseBoolean(a("resume", null));
+        this.bestFileName = a("bestFile", dir + String.join(".", (validationFlag) ? "transfer" : "best", String.valueOf(s), this.targetShapeName, this.configuration, "csv"));
         this.validationFileName = null;//a("validationFile", dir + ((this.validationFlag) ? "validation." : "") + String.join(".", "test", String.valueOf(s), this.targetShapeName, "csv"));
         this.validationTransformationNames = l(a("validationTransformation", "identity")).stream().filter(sen -> !sen.isEmpty()).collect(Collectors.toList());
         this.validationTerrainNames = l(a("validationTerrain", "flat,hilly-1-10-0,hilly-1-10-1,hilly-1-10-2,steppy-1-10-0,steppy-1-10-1,steppy-1-10-2")).stream().filter(sen -> !sen.isEmpty()).collect(Collectors.toList());
@@ -150,11 +161,15 @@ public class Main extends Worker {
     }
 
     private String getDonator() {
-        return dir + String.join(".", "best", String.valueOf(this.s), "biped-4x3", this.configuration, "csv");
+        return dir + String.join(".", "best", String.valueOf(this.s), this.targetShapeName, this.configuration, "csv");
+    }
+    // TODO: remove the hardcoding
+    private String getReceiver() {
+        return dir + String.join(".", "best", String.valueOf((this.s == 14) ? 10 : this.s + 1), this.targetShapeName, this.configuration, "csv");
     }
 
-    private String getReceiver() {
-        return dir + String.join(".", "best", String.valueOf(this.s)/*String.valueOf((this.s == 4) ? 0 : this.s + 1)*/, "worm-6x2", this.configuration, "csv");
+    private String getToBeResumed() {
+        return dir + String.join(".", "false", String.valueOf(this.s), this.targetShapeName, this.configuration, "1500", "csv");
     }
     // TODO: could be called directly inside the evolution
     private Listener.Factory<Event<?, ? extends Robot<?>, ? extends Outcome>> prepareListenerFactory() {

@@ -291,7 +291,12 @@ public class MyController implements Controller<SensingVoxel>, Sized {
     public MyController(@JsonProperty("nodes") Map<Integer, Neuron> neurons) {
         this.nodes = new HashMap<>();
         for (Neuron entry : neurons.values()) {
-            this.copyNeuron(entry, true);
+            this.copyNeuron(entry, false);
+        }
+        for (Neuron neuron : neurons.values()) {
+            for (Edge edge : neuron.getIngoingEdges()) {
+                this.copyEdge(edge);
+            }
         }
     }
 
@@ -383,16 +388,6 @@ public class MyController implements Controller<SensingVoxel>, Sized {
             }
         }
         return out;
-    }
-
-    public List<Edge> getAllEdges(Neuron neuron) {
-        List<Edge> edges = neuron.getIngoingEdges();
-        for (Edge edge : this.getEdgeSet()) {
-            if (edge.getSource() == neuron.getIndex() && edge.getTarget() != neuron.getIndex()) {
-                edges.add(edge);
-            }
-        }
-        return edges;
     }
 
     public void removeEdge(Edge edge) {

@@ -9,6 +9,9 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.math3.util.Pair;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -19,25 +22,29 @@ import static it.units.malelab.jgea.core.util.Args.a;
 public class VisualizeBrain {
 
     private static final Logger L = Logger.getLogger(VideoMaker.class.getName());
+    private static final String dir = "/Users/federicopigozzi/Downloads/mixed/";
+    private static boolean saveBestModule;
 
     public static void main(String[] args) throws IOException, InterruptedException {
         //get params
-        String inputFileName = a(args, "input", null);
+        String[] inputFileKind = a(args, "input", null).split("-");
+        saveBestModule = Boolean.parseBoolean(a(args, "module", null));
+        for (File file : Files.walk(Paths.get(dir)).filter(p -> Files.isRegularFile(p) && Arrays.stream(inputFileKind).allMatch(s -> p.toString().contains(s))).map(Path::toFile).collect(Collectors.toList())) {
+            visualizBrainFromFile(file.getPath());
+        }
+    }
+
+    private static void visualizBrainFromFile(String inputFileName) throws IOException, InterruptedException {
         int numDirs = inputFileName.split("/").length;
-        String intermediateFileName = a(args, "output", inputFileName.split("/")[numDirs - 1].replace("csv", "txt"));
         String outputFileName = "./brain_visualizations/brain." + inputFileName.split("/")[numDirs - 1].replace("csv", "png");
-        String serializedRobotColumn = a(args, "serializedRobotColumnName", "serialized");
-        String transformationName = a(args, "transformation", "identity");
-        SerializationUtils.Mode mode = SerializationUtils.Mode.valueOf(a(args, "deserializationMode", SerializationUtils.Mode.GZIPPED_JSON.name()).toUpperCase());
+        SerializationUtils.Mode mode = SerializationUtils.Mode.valueOf(SerializationUtils.Mode.GZIPPED_JSON.name().toUpperCase());
         //read data
         Reader reader = null;
         List<CSVRecord> records = null;
-        List<String> headers = null;
         try {
             reader = new FileReader(inputFileName);
-            CSVParser csvParser = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader().parse(reader);
+            CSVParser csvParser = CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader().parse(reader);
             records = csvParser.getRecords();
-            headers = csvParser.getHeaderNames();
             reader.close();
         } catch (IOException e) {
             L.severe(String.format("Cannot read input data: %s", e));
@@ -50,23 +57,18 @@ public class VisualizeBrain {
             }
             System.exit(-1);
         }
-        if (records.size() != 1) {
-            L.severe(String.format("Found more than one row in %s", inputFileName));
-        }
-        if (!headers.contains(serializedRobotColumn)) {
-            L.severe(String.format("Cannot find serialized robot column %s in %s", serializedRobotColumn, headers));
-            System.exit(-1);
-        }
-        //build grid
-        Robot<?> target = RobotUtils.buildRobotTransformation(transformationName, new Random(0))
-                .apply(SerializationUtils.deserialize(records.get(0).get(serializedRobotColumn), Robot.class, mode));
+        Robot<?> target = RobotUtils.buildRobotTransformation("identity", new Random(0))
+                .apply(SerializationUtils.deserialize(records.get(records.size() - 1).get("best→solution→serialized"), Robot.class, mode));
         // TODO: maybe add specific column best yes/no
         try {
-            writeBrainToFile(target, intermediateFileName);
+            writeBrainToFile(target, "./temp_brain.txt");
+            if (saveBestModule) {
+                writeBestModuleToFile((MyController) target.getController(), "./best_module.txt", inputFileName.split("/")[numDirs - 1].split("\\.")[2]);
+            }
         } catch (IOException ioException) {
             ioException.printStackTrace();
         }
-        Process p = Runtime.getRuntime().exec("python python/visualize_brain.py " + intermediateFileName + " " + outputFileName);
+        Process p = Runtime.getRuntime().exec("python python/visualize_brain.py " + "./temp_brain.txt" + " " + outputFileName);
         p.waitFor();
     }
 
@@ -91,6 +93,16 @@ public class VisualizeBrain {
                 e.printStackTrace();
             }
         });
+        writer.close();
+    }
+
+    public static void writeBestModuleToFile(MyController controller, String outputName, String shape) throws IOException {
+        BufferedWriter writer = new BufferedWriter(new FileWriter(outputName));
+        List<Pair<Integer, Integer>> bestModule = TopologicalMutation.selectBestModule(controller, 2, 5);
+        writer.write("x,y,shape\n");
+        for (Pair<Integer, Integer> v : bestModule) {
+            writer.write(v.getFirst() + "," + v.getSecond() + "," + shape + "\n");
+        }
         writer.close();
     }
 

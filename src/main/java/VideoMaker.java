@@ -51,10 +51,9 @@ public class VideoMaker {
 
     public static void main(String[] args) throws IOException, InterruptedException {
         //get params
-        String inputFileName = a(args, "input", null);
+        String inputFileName = a(args, "best", null);
         int numDirs = inputFileName.split("/").length;
         String seed = inputFileName.split("/")[numDirs - 1].split("\\.")[1];
-        String intermediateFileName = "./ready_to_film/" + inputFileName.split("/")[numDirs - 1];
         String outputFileName = a(args, "output", null);
         String serializedRobotColumn = a(args, "serializedRobotColumnName", "serialized");
         String terrainName = a(args, "terrain", "hilly-1-10-" + seed);
@@ -70,12 +69,11 @@ public class VideoMaker {
         Reader reader = null;
         List<CSVRecord> records = null;
         List<String> headers = null;
-        Process process = Runtime.getRuntime().exec("python python/parse_best_file.py " + inputFileName + " " + intermediateFileName);
-        process.waitFor();
-        inputFileName = intermediateFileName;
+        parseBestFromFile(inputFileName);
+        inputFileName = "./to_film.txt";
         try {
             reader = new FileReader(inputFileName);
-            CSVParser csvParser = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader().parse(reader);
+            CSVParser csvParser = CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader().parse(reader);
             records = csvParser.getRecords();
             headers = csvParser.getHeaderNames();
             reader.close();
@@ -181,6 +179,19 @@ public class VideoMaker {
             executor.shutdownNow();
             uiExecutor.shutdownNow();
         }
+    }
+
+    public static void parseBestFromFile(String file) throws IOException {
+        BufferedWriter writer = new BufferedWriter(new FileWriter("to_film.txt"));
+        Reader reader = new FileReader(file);
+        List<CSVRecord> records;
+        CSVParser csvParser = CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader().parse(reader);
+        records = csvParser.getRecords();
+        String best = records.get(records.size() - 1).get("best→solution→serialized");
+        reader.close();
+        writer.write("x;y;serialized\n");
+        writer.write("0;0;" + best);
+        writer.close();
     }
 
 }

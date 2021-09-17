@@ -12,6 +12,7 @@ public interface TopologicalMutation extends Mutation<MyController> {
     static double getMaxDist(String dist) {
         return switch (dist) {
             case "minimal" -> 0.0;
+            case "hopping" -> 1.0;
             case "full" -> Double.MAX_VALUE;
             default -> throw new IllegalArgumentException("Connectivity not known: " + dist);
         };
@@ -49,16 +50,20 @@ public interface TopologicalMutation extends Mutation<MyController> {
         visitedNeurons.forEach(controller::removeNeuron);
     }
 
-    static List<Pair<Integer, Integer>> selectBestModule(MyController controller, int minSize, int maxSize) {
+    static List<List<Pair<Integer, Integer>>> enumeratePossibleModules(MyController controller, int minSize, int maxSize) {
         Pair<Integer, Integer>[] voxels = controller.getValidCoordinates();
         List<List<Pair<Integer, Integer>>> subsets = new ArrayList<>();
         for (int i=minSize; i <= maxSize; ++i) {
-            subsets.addAll(subSets(voxels, i));
+            subsets.addAll(contiguousSubSets(voxels, i));
         }
-        return subsets.stream().min(Comparator.comparingDouble(x -> countCrossingEdgesWeight(x, controller) / countNotCrossingEdgesWeight(x, controller))).get();
+        return subsets;
     }
 
-    static <T> List<List<T>> subSets(T[] list, int size) {
+    static List<Pair<Integer, Integer>> selectBestModule(MyController controller, int minSize, int maxSize) {
+        return enumeratePossibleModules(controller, minSize, maxSize).stream().min(Comparator.comparingDouble(x -> countCrossingEdgesWeight(x, controller) / countNotCrossingEdgesWeight(x, controller))).get();
+    }
+
+    static <T> List<List<T>> contiguousSubSets(T[] list, int size) {
         List<List<T>> out = new ArrayList<>();
         for (int i=0; i < list.length - size + 1; ++i) {
             List<T> subset = new ArrayList<>(Arrays.asList(list).subList(i, i + size - 1));

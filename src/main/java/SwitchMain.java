@@ -51,7 +51,7 @@ import static it.units.malelab.jgea.core.util.Args.*;
 /**
  * @author eric
  */
-public class NewMain extends Worker {
+public class SwitchMain extends Worker {
 
     private final static Settings PHYSICS_SETTINGS = new Settings();
 
@@ -74,12 +74,12 @@ public class NewMain extends Worker {
     private boolean isWithTopological;
     private int switchTime;
 
-    public NewMain(String[] args) {
+    public SwitchMain(String[] args) {
         super(args);
     }
 
     public static void main(String[] args) {
-        new NewMain(args);
+        new SwitchMain(args);
     }
 
     @Override
@@ -109,7 +109,6 @@ public class NewMain extends Worker {
         String configuration = "minimal";
         this.isWithTopological = Boolean.parseBoolean(a("topological", null));
         this.bestFileName = a("bestFile", dir + String.join(".", String.valueOf(this.isWithTopological), String.valueOf(s), this.targetShapeName, configuration, "csv"));
-        this.isWithTopological = Boolean.parseBoolean(a("topological", null));
         this.switchTime = i(a("time", null));
     }
     // TODO: could be called directly inside the evolution

@@ -3,32 +3,42 @@ import geneticOps.TopologicalMutation;
 import org.apache.commons.math3.util.Pair;
 import validation.ValidationBuilder;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 
 public class TestPartition {
 
-    private static final File dir = new File("/Users/federicopigozzi/Downloads/mega_experiment/");
+    private static final String dir = "/Users/federicopigozzi/Downloads/mega_experiment/";
 
     public static void main(String[] args) throws IOException, InterruptedException {
-        List<File> bestFiles = new ArrayList<>();
-        for (File file : Objects.requireNonNull(dir.listFiles())) {
-            if (file.getPath().contains("false") && file.getPath().contains("1500") && file.getPath().contains("biped-4x3")) {
-                bestFiles.add(file);
-            }
-        }
-        for (File file : bestFiles) {
+        BufferedWriter writer = new BufferedWriter(new FileWriter("modules.csv", false));
+        writer.write("cross;non_cross;shape;is_best\n");
+        for (File file : Files.walk(Paths.get(dir)).filter(p -> Files.isRegularFile(p) && p.toString().contains("false") && p.toString().contains("1500")).map(Path::toFile).collect(Collectors.toList())) {
             String path = file.getPath();
+            String shape = path.split("\\.")[2];
             Random random = new Random(Integer.parseInt(path.split("\\.")[1]));
-            ValidationBuilder validationBuilder = new ValidationBuilder("biped-4x3", "fixed", "rewiring");
+            ValidationBuilder validationBuilder = new ValidationBuilder(shape, "fixed", "rewiring");
             MyController controller = (MyController) validationBuilder.parseIndividualFromFile(path, 1500, random);
-            List<Pair<Integer, Integer>> module = TopologicalMutation.selectBestModule(controller, 2, 5);
-            int numDirs = path.split("/").length;
+            List<List<Pair<Integer, Integer>>> modules = TopologicalMutation.enumeratePossibleModules(controller, 2, 5);
+            List<Pair<Integer, Integer>> bestModule = TopologicalMutation.selectBestModule(controller, 2, 5);
+            System.out.println(path);
+            System.out.println(bestModule);
+            for (List<Pair<Integer, Integer>> module : modules) {
+                writer.write(String.join(";", String.valueOf(TopologicalMutation.countCrossingEdgesWeight(module, controller)),
+                        String.valueOf(TopologicalMutation.countNotCrossingEdgesWeight(module, controller)), shape, (module.equals(bestModule)) ? "1" : "0") + "\n");
+            }
+            /*int numDirs = path.split("/").length;
             String intermediateFileName = path.split("/")[numDirs - 1].replace("csv", "txt");
             String outputFileName = "./brain_visualizations/brain." + intermediateFileName.replace("txt", "png");
             try {
@@ -39,8 +49,9 @@ public class TestPartition {
             Process p = Runtime.getRuntime().exec("python python/visualize_brain.py " + intermediateFileName + " " + outputFileName);
             p.waitFor();
             System.out.println(path);
-            System.out.println(module);
+            System.out.println(module);*/
         }
+        writer.close();
     }
 
 }

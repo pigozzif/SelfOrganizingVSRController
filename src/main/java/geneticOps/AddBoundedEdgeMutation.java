@@ -8,7 +8,7 @@ import java.util.function.Supplier;
 
 
 public class AddBoundedEdgeMutation extends AddEdgeMutation {
-    // TODO: maybe use validator object instead of string
+
     private final List<Pair<Integer, Integer>> module;
 
     public AddBoundedEdgeMutation(Supplier<Double> s, double p, String dist, String morph, String conf,
@@ -19,20 +19,7 @@ public class AddBoundedEdgeMutation extends AddEdgeMutation {
 
     @Override
     public void enableMutation(MyController controller, Random random) {
-        List<Pair<Integer, Integer>> nodes = new ArrayList<>();
-        for (MyController.Neuron n1 : controller.getNodeSet()) {
-            for (MyController.Neuron n2 : controller.getNodeSet()) {
-                if (!n2.isSensing() && !n1.isActuator() && MyController.euclideanDistance(n1, n2) <= this.maxDist && !n2.hasInNeighbour(n1) &&
-                        n1.getIndex() != n2.getIndex() && TopologicalMutation.areCrossingModule(this.module, n1, n2)) {
-                    nodes.add(new Pair<>(n1.getIndex(), n2.getIndex()));
-                }
-            }
-        }
-        if (nodes.isEmpty()) {
-            return;
-        }
-        Pair<Integer, Integer> chosenOne = nodes.get(random.nextInt(nodes.size()));
-        controller.addEdge(chosenOne.getFirst(), chosenOne.getSecond(), this.parameterSupplier.get(), this.parameterSupplier.get());
+        throw new UnsupportedOperationException("bounded edge addition not supported");
     }
 
     @Override
