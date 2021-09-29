@@ -238,7 +238,7 @@ public class MyController implements Controller<SensingVoxel>, Sized {
         @Override
         public void compute(Grid<? extends SensingVoxel> voxels, MyController controller) {
             SensingVoxel voxel = voxels.get(x, y);
-            message = function.apply(voxel.getLastReadings().stream().flatMapToDouble(x -> Arrays.stream(x.getValue()))
+            message = function.apply(voxel.getSensors().stream().flatMapToDouble(x -> Arrays.stream(x.getReadings()))
                     .toArray()[numSensor]);
         }
 
@@ -357,12 +357,27 @@ public class MyController implements Controller<SensingVoxel>, Sized {
         return idx;
     }
 
-    public void addHiddenNode(int source, int dest, MultiLayerPerceptron.ActivationFunction a, int x, int y, Supplier<Double> parameterSupplier) {
+    public Neuron addHiddenNode(int source, int target, MultiLayerPerceptron.ActivationFunction a, int x, int y, Supplier<Double> parameterSupplier) {
         int idx = this.nodes.size();
         Neuron newNode = new HiddenNeuron(idx, a, x, y);
         this.nodes.put(idx, newNode);
         this.addEdge(source, idx, parameterSupplier.get(), parameterSupplier.get());
-        this.addEdge(idx, dest, parameterSupplier.get(), parameterSupplier.get());
+        this.addEdge(idx, target, parameterSupplier.get(), parameterSupplier.get());
+        return newNode;
+    }
+
+    public Neuron addHiddenNodeEdgeSplit(int source, int target, MultiLayerPerceptron.ActivationFunction a, int x, int y, Supplier<Double> parameterSupplier) {
+        int idx = this.nodes.size();
+        Neuron newNode = new HiddenNeuron(idx, a, x, y);
+        this.nodes.put(idx, newNode);
+        List<Edge> edges = this.nodes.get(source).getIngoingEdges().stream().filter(e -> e.getTarget() == target).collect(Collectors.toList());
+        for (Edge edge : edges) {
+            edge.setTarget(idx);
+            this.nodes.get(target).getIngoingEdges().removeIf(e -> e.getSource() == source);
+            newNode.addIngoingEdge(edge);
+        }
+        this.addEdge(idx, target, parameterSupplier.get(), parameterSupplier.get());
+        return newNode;
     }
 
     public void addActuatorNode(int x, int y) {
@@ -375,6 +390,17 @@ public class MyController implements Controller<SensingVoxel>, Sized {
         int idx = this.nodes.size();
         Neuron newNode = new SensingNeuron(idx, x, y, s);
         this.nodes.put(idx, newNode);
+    }
+
+    public void addChain(int source, int target, List<Pair<Integer, Integer>> path, Supplier<Double> parameterSupplier) {
+        for (int i=1; i < path.size() - 1; ++i) {
+            int idx = this.nodes.size();
+            Neuron newNode = new HiddenNeuron(idx, MultiLayerPerceptron.ActivationFunction.IDENTITY, path.get(i).getFirst(), path.get(i).getSecond());
+            this.nodes.put(idx, newNode);
+            this.addEdge(source, idx, parameterSupplier.get(), parameterSupplier.get());
+            source = idx;
+        }
+        this.addEdge(source, target, parameterSupplier.get(), parameterSupplier.get());
     }
 
     public Map<Integer, List<Edge>> getOutgoingEdges() {

@@ -72,7 +72,7 @@ public class Main extends Worker {
     public static final int CACHE_SIZE = 0;
     public static final String SEQUENCE_SEPARATOR_CHAR = ">";
     public static final String SEQUENCE_ITERATION_CHAR = ":";
-    private static final String dir = "./output/";//""/Users/federicopigozzi/Downloads/mega_experiment/";
+    private static final String dir = "./output/";
     private double episodeTime;
     private double episodeTransientTime;
     private double validationEpisodeTime;
@@ -129,7 +129,7 @@ public class Main extends Worker {
             else {
                 this.performEvolution(this.prepareListenerFactory(), new ValidationFactory(1.0, Map.of(new AddNodeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.3, new AddEdgeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.2, new MutateEdge(0.7, 0.0), 0.5),
                                 builder.buildValidation(this.getDonator(), this.getReceiver(), this.morph.getBody(), this.seed), basicFactory),
-                        Map.of(new AddNodeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.3, new AddEdgeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.2, new MutateEdge(0.7, 0.0), 0.5));
+                        Map.of(/*new AddNodeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.3, new AddEdgeMutation(this.parameterSupplier, 0.5, this.connectivity, this.targetShapeName, this.configuration), 0.2,*/ new MutateEdge(0.7, 0.0), 1.0));
             }
         }
     }
@@ -139,8 +139,8 @@ public class Main extends Worker {
         this.episodeTransientTime = d(a("episodeTransientTime", "5"));
         this.validationEpisodeTime = d(a("validationEpisodeTime", Double.toString(episodeTime)));
         this.validationEpisodeTransientTime = d(a("validationEpisodeTransientTime", Double.toString(episodeTransientTime)));
-        this.popSize = i(a("pop", "100"));
-        this.births = i(a("births", "200"));
+        this.popSize = i(a("pop", null));
+        this.births = i(a("births", null));
         this.s = Integer.parseInt(Args.a(args, "seed", null));
         this.seed = new Random(s);
         this.parameterSupplier = () -> (this.seed.nextDouble() * 2.0) - 1.0;
@@ -151,13 +151,13 @@ public class Main extends Worker {
         this.initPerc = Double.parseDouble(Args.a(args, "initPerc", "1.0"));
         this.transformationNames = l(a("transformation", "identity"));
         this.validationFlag = Boolean.parseBoolean(a("validation", "false"));
-        this.configuration = a("configuration", null);
+        this.configuration = a("configuration", "plain");
         this.isResumed = Boolean.parseBoolean(a("resume", null));
         this.bestFileName = a("bestFile", dir + String.join(".", (validationFlag) ? "transfer" : "best", String.valueOf(s), this.targetShapeName, this.configuration, "csv"));
         this.validationFileName = null;//a("validationFile", dir + ((this.validationFlag) ? "validation." : "") + String.join(".", "test", String.valueOf(s), this.targetShapeName, "csv"));
         this.validationTransformationNames = l(a("validationTransformation", "identity")).stream().filter(sen -> !sen.isEmpty()).collect(Collectors.toList());
         this.validationTerrainNames = l(a("validationTerrain", "flat,hilly-1-10-0,hilly-1-10-1,hilly-1-10-2,steppy-1-10-0,steppy-1-10-1,steppy-1-10-2")).stream().filter(sen -> !sen.isEmpty()).collect(Collectors.toList());
-        this.connectivity = a("connectivity", null);
+        this.connectivity = a("connectivity", "full");
     }
 
     private String getDonator() {

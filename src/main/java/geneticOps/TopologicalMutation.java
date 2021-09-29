@@ -31,7 +31,7 @@ public interface TopologicalMutation extends Mutation<MyController> {
 
     static double[] getEdgeProbs(String conf) {
         return switch (conf) {
-            case "minimal" -> new double[] {1.0, 1.0};
+            case "plain" -> new double[] {1.0, 1.0};
             case "unmodular" -> new double[] {1.0, 10.0};
             case "modular" -> new double[] {10.0, 1.0};
             default -> throw new IllegalArgumentException("Configuration not known: " + conf);
@@ -138,6 +138,32 @@ public interface TopologicalMutation extends Mutation<MyController> {
         Pair<Integer, Integer> targetPair = new Pair<>(target.getX(), target.getY());
         return (module.contains(sourcePair) && !module.contains(targetPair)) ||
                 (module.contains(targetPair) && !module.contains(sourcePair));
+    }
+
+    static List<Pair<Integer, Integer>> getAStarPath(Pair<Integer, Integer> source, Pair<Integer, Integer> target, MyController controller) {
+        Pair<Integer, Integer>[] voxels = controller.getValidCoordinates();
+        List<Pair<Integer, Integer>> visited = new ArrayList<>();
+        PriorityQueue<Pair<Integer, Integer>> heap = new PriorityQueue<>(Comparator.comparingDouble(n -> MyController.euclideanDistance(n.getFirst(), n.getSecond(), target.getFirst(), target.getSecond())));
+        heap.add(source);
+        Pair<Integer, Integer> current;
+        while (!heap.isEmpty()) {
+            current = heap.poll();
+            visited.add(current);
+            if (current.equals(target)) {
+                return visited;
+            }
+            for (int i : new int[] {-1, 1}) {
+                Pair<Integer, Integer> candidate = new Pair<>(current.getFirst(), current.getSecond() + i);
+                if (!visited.contains(candidate) && Arrays.asList(voxels).contains(candidate)) {
+                    heap.add(candidate);
+                }
+                candidate = new Pair<>(current.getFirst() + i, current.getSecond());
+                if (!visited.contains(candidate) && Arrays.asList(voxels).contains(candidate)) {
+                    heap.add(candidate);
+                }
+            }
+        }
+        throw new RuntimeException("Cannot reach target voxel!");
     }
 
 }

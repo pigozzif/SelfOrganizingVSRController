@@ -17,12 +17,12 @@ public class TimedOperator implements GeneticOperator<MyController> {
 
     public TimedOperator(int t, Supplier<Double> parameterSupplier, String shape, boolean postTopological) {
         this.time = t;
-        this.priorMap = Map.of(new AddNodeMutation(parameterSupplier, 0.5, "full", shape, "minimal"), 0.3,
-                new AddEdgeMutation(parameterSupplier, 0.5, "full", shape, "minimal"), 0.2,
+        this.priorMap = Map.of(new AddNodeMutation(parameterSupplier, 0.5, "full", shape, "plain"), 0.3,
+                new AddEdgeMutation(parameterSupplier, 0.5, "full", shape, "plain"), 0.2,
                 new MutateEdge(0.7, 0.0), 0.5);
         if (postTopological) {
-            this.postMap = Map.of(new AddNodeMutation(parameterSupplier, 0.5, "full", shape, "minimal"), 0.6,
-                    new AddEdgeMutation(parameterSupplier, 0.5, "full", shape, "minimal"), 0.4);
+            this.postMap = Map.of(new AddNodeMutation(parameterSupplier, 0.5, "full", shape, "plain"), 0.6,
+                    new AddEdgeMutation(parameterSupplier, 0.5, "full", shape, "plain"), 0.4);
         }
         else {
             this.postMap = Map.of(new MutateEdge(0.7, 0.0), 1.0);

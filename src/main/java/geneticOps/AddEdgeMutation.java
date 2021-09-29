@@ -25,7 +25,7 @@ public class AddEdgeMutation implements TopologicalMutation {
     }
 
     public AddEdgeMutation(Supplier<Double> s) {
-        this(s, 1.0, "minimal", "worm-5x1", "minimal");
+        this(s, 1.0, "minimal", "worm-5x1", "plain");
     }
 
     @Override

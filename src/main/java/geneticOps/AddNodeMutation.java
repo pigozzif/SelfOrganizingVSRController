@@ -27,7 +27,7 @@ public class AddNodeMutation implements TopologicalMutation {
     }
 
     public AddNodeMutation(Supplier<Double> sup) {
-        this(sup, 1.0, "minimal", "worm-5x1", "minimal");
+        this(sup, 1.0, "minimal", "worm-5x1", "plain");
     }
 
     @Override

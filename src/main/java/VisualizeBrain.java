@@ -22,7 +22,7 @@ import static it.units.malelab.jgea.core.util.Args.a;
 public class VisualizeBrain {
 
     private static final Logger L = Logger.getLogger(VideoMaker.class.getName());
-    private static final String dir = "/Users/federicopigozzi/Downloads/mixed/";
+    private static final String dir = "/Users/federicopigozzi/Downloads/hopping/";
     private static boolean saveBestModule;
 
     public static void main(String[] args) throws IOException, InterruptedException {
@@ -36,7 +36,7 @@ public class VisualizeBrain {
 
     private static void visualizBrainFromFile(String inputFileName) throws IOException, InterruptedException {
         int numDirs = inputFileName.split("/").length;
-        String outputFileName = "./brain_visualizations/brain." + inputFileName.split("/")[numDirs - 1].replace("csv", "png");
+        String outputFileName = "./brain_visualizations/hopping.brain." + inputFileName.split("/")[numDirs - 1].replace("csv", "png");
         SerializationUtils.Mode mode = SerializationUtils.Mode.valueOf(SerializationUtils.Mode.GZIPPED_JSON.name().toUpperCase());
         //read data
         Reader reader = null;

@@ -16,24 +16,23 @@
 
 import it.units.erallab.hmsrobots.core.objects.Robot;
 import it.units.erallab.hmsrobots.tasks.locomotion.Locomotion;
+import it.units.erallab.hmsrobots.tasks.locomotion.Outcome;
 import it.units.erallab.hmsrobots.util.Grid;
 import it.units.erallab.hmsrobots.util.RobotUtils;
 import it.units.erallab.hmsrobots.util.SerializationUtils;
 import it.units.erallab.hmsrobots.viewers.*;
-import it.units.erallab.hmsrobots.viewers.drawers.Ground;
-import it.units.erallab.hmsrobots.viewers.drawers.Lidar;
-import it.units.erallab.hmsrobots.viewers.drawers.SensorReading;
-import it.units.erallab.hmsrobots.viewers.drawers.Voxel;
+import it.units.erallab.hmsrobots.viewers.drawers.Drawers;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.lang3.tuple.Pair;
 import org.dyn4j.dynamics.Settings;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -51,17 +50,18 @@ public class VideoMaker {
 
     public static void main(String[] args) throws IOException, InterruptedException {
         //get params
-        String inputFileName = a(args, "best", null);
+        String inputFileName = a(args, "input", null);
+        boolean frames = Boolean.parseBoolean(a(args, "frames", null));
         int numDirs = inputFileName.split("/").length;
         String seed = inputFileName.split("/")[numDirs - 1].split("\\.")[1];
         String outputFileName = a(args, "output", null);
         String serializedRobotColumn = a(args, "serializedRobotColumnName", "serialized");
-        String terrainName = a(args, "terrain", "hilly-1-10-" + seed);
+        String terrainName = a(args, "terrain", "hilly-0.25-1-" + seed);
         String transformationName = a(args, "transformation", "identity");
         double startTime = d(a(args, "startTime", "0.0"));
         double endTime = d(a(args, "endTime", "30.0"));
-        int w = i(a(args, "w", "600"));
-        int h = i(a(args, "h", "400"));
+        int w = i(a(args, "w", "900"));
+        int h = i(a(args, "h", "600"));
         int frameRate = i(a(args, "frameRate", "30"));
         String encoderName = a(args, "encoder", VideoUtils.EncoderFacility.FFMPEG_LARGE.name());
         SerializationUtils.Mode mode = SerializationUtils.Mode.valueOf(a(args, "deserializationMode", SerializationUtils.Mode.GZIPPED_JSON.name()).toUpperCase());
@@ -133,9 +133,17 @@ public class VideoMaker {
                                 .apply(SerializationUtils.deserialize(rawGrid.get(x, y).get(0), Robot.class, mode))
                 )
         );
-
         //prepare problem
         Locomotion locomotion = new Locomotion(endTime, Locomotion.createTerrain(terrainName), new Settings());
+        if (frames) {
+            FramesImageBuilder framesImageBuilder = new FramesImageBuilder(
+                    5, 6.25, 0.25, 300, 300, FramesImageBuilder.Direction.HORIZONTAL, Drawers.basic()
+            );
+            Outcome result = locomotion.apply(namedRobotGrid.get(0, 0).getValue(), framesImageBuilder);
+            BufferedImage image = framesImageBuilder.getImage();
+            ImageIO.write(image, "png", new File("biped-frames.png"));
+            return;
+        }
         //do simulations
         ScheduledExecutorService uiExecutor = Executors.newScheduledThreadPool(4);
         ExecutorService executor = Executors.newCachedThreadPool();
@@ -143,6 +151,7 @@ public class VideoMaker {
         if (outputFileName == null) {
             gridSnapshotListener = new GridOnlineViewer(
                     Grid.create(namedRobotGrid, p -> p == null ? null : p.getLeft()),
+                    Grid.create(namedRobotGrid, p -> p == null ? null : Drawers.basicWithMiniWorld(p.getLeft())),
                     uiExecutor
             );
             ((GridOnlineViewer) gridSnapshotListener).start(3);
@@ -152,16 +161,7 @@ public class VideoMaker {
                         w, h, startTime, frameRate, VideoUtils.EncoderFacility.valueOf(encoderName.toUpperCase()),
                         new File(outputFileName),
                         Grid.create(namedRobotGrid, p -> p == null ? null : p.getLeft()),
-                        GraphicsDrawer.build().setConfigurable("drawers", List.of(
-                                it.units.erallab.hmsrobots.viewers.drawers.Robot.build(),
-                                Voxel.build(),
-                                Ground.build(),
-                                SensorReading.build(),
-                                Lidar.build()
-                        )).setConfigurable("generalRenderingModes", Set.of(
-                                GraphicsDrawer.GeneralRenderingMode.TIME_INFO,
-                                GraphicsDrawer.GeneralRenderingMode.VOXEL_COMPOUND_CENTERS_INFO
-                        ))
+                        Grid.create(namedRobotGrid, p -> p == null ? null : Drawers.basicWithMiniWorld(p.getLeft()))
                 );
             } catch (IOException e) {
                 L.severe(String.format("Cannot build grid file writer: %s", e));
