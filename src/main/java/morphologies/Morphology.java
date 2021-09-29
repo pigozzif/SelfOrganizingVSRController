@@ -55,7 +55,7 @@ public class Morphology {
                 sensors[coord] = -1;
             }
             else {
-                sensors[coord] = voxel.getValue().getSensors().stream().mapToInt(s -> s.domains().length).sum();
+                sensors[coord] = voxel.getValue().getSensors().stream().mapToInt(s -> s.getReadings().length).sum();
             }
         }
         this.allowedMorph = this.body.stream().filter(v -> v.getValue() != null).map(v -> new Pair(v.getX(), v.getY())).collect(Collectors.toList());
