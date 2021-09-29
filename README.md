@@ -12,7 +12,8 @@ where `{args}` is a placeholder for the arguments you must provide (see below), 
 ## Structure
 * `src` contains all the source code for the project;
 * `libs` contains the .jar files for the dependencies (see below);
-* `target` contains the main .jar file.
+* `target` contains the main .jar file;
+* `python` contains python scripts for pretty-plotting the robots' evolved controllers.
 
 ## Dependencies
 The project relies on:
