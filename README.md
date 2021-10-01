@@ -1,6 +1,6 @@
 # SelfOrganizingVSRController
 
-This is the official repository for the Artificial Life journal (special issue on Emodied Intelligence) paper TODO, hosting all the code necessary to replicate the experiments. This work was carried out at the Evolutionary Robotics and Artificial Life Laboratory (ERALLab) at the Department of Engineering and Architecture, University of Trieste (Italy).
+This is the official repository for the Artificial Life journal (special issue on Emodied Intelligence) paper "Evolving Modularity in Soft Robots through an Embodied and Self-Organizing Neural Controller", hosting all the code necessary to replicate the experiments. This work was carried out at the Evolutionary Robotics and Artificial Life Laboratory (ERALLab) at the Department of Engineering and Architecture, University of Trieste (Italy).
 
 ## Scope
 By running
